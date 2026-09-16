@@ -31,6 +31,7 @@ router.get('/me', requireAuth, async (req, res) => {
 
   const [
     { data: org },
+    { data: settings },
     { count: messages },
     { count: bookings },
     { count: leadsCount },
@@ -43,6 +44,15 @@ router.get('/me', requireAuth, async (req, res) => {
         .select('*')
         .eq('id', req.orgId)
         .single()
+    ),
+
+    timedQuery(
+      'settings',
+      supabaseAdmin
+        .from('settings')
+        .select('*')
+        .eq('organization_id', req.orgId)
+        .maybeSingle()
     ),
 
     timedQuery(
@@ -89,6 +99,7 @@ router.get('/me', requireAuth, async (req, res) => {
 
   res.json({
     org,
+    settings,
     role: req.role,
     usage: {
       messagesThisMonth: messages || 0,

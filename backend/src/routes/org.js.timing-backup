@@ -5,90 +5,51 @@ const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
 
-/** GET /api/org/role — current user's role */
-router.get('/role', requireAuth, (req, res) => {
-  res.json({ role: req.role || 'owner' });
-});
-
 /** GET /api/org/me — current org + settings + usage stats */
 router.get('/me', requireAuth, async (req, res) => {
   const started = Date.now();
+  console.log(`[ORG/ME] START org=${req.orgId}`);
+  const [{ data: org }, { data: settings }] = await Promise.all([
+    supabaseAdmin.from('organizations').select('*').eq('id', req.orgId).single(),
+    supabaseAdmin.from('settings').select('*').eq('organization_id', req.orgId).maybeSingle(),
+  ]);
 
+  // Usage this month
   const monthStart = new Date();
   monthStart.setDate(1);
   monthStart.setHours(0, 0, 0, 0);
-  const monthStartISO = monthStart.toISOString();
+
+  const { count: messages } = await supabaseAdmin
+    .from('usage_events')
+    .select('id', { count: 'exact', head: true })
+    .eq('organization_id', req.orgId)
+    .eq('event_type', 'message')
+    .gte('created_at', monthStart.toISOString());
 
   const config = require('../config');
+  const messageQuota = org?.monthly_message_quota ?? config.freeTierQuotas.messagesPerMonth;
+  const { count: bookings } = await supabaseAdmin
+    .from('usage_events')
+    .select('id', { count: 'exact', head: true })
+    .eq('organization_id', req.orgId)
+    .eq('event_type', 'booking')
+    .gte('created_at', monthStart.toISOString());
 
-  // All independent queries run in parallel.
-  const timedQuery = async (name, query) => {
-    const start = Date.now();
-    const result = await query;
-    console.log(`[ORG/ME] ${name}: ${Date.now() - start}ms`);
-    return result;
-  };
+  const { count: leadsCount } = await supabaseAdmin
+    .from('leads')
+    .select('id', { count: 'exact', head: true })
+    .eq('organization_id', req.orgId);
 
-  const [
-    { data: org },
-    { count: messages },
-    { count: bookings },
-    { count: leadsCount },
-    { count: docs },
-  ] = await Promise.all([
-    timedQuery(
-      'organizations',
-      supabaseAdmin
-        .from('organizations')
-        .select('*')
-        .eq('id', req.orgId)
-        .single()
-    ),
-
-    timedQuery(
-      'messages usage',
-      supabaseAdmin
-        .from('usage_events')
-        .select('id', { count: 'exact', head: true })
-        .eq('organization_id', req.orgId)
-        .eq('event_type', 'message')
-        .gte('created_at', monthStartISO)
-    ),
-
-    timedQuery(
-      'bookings usage',
-      supabaseAdmin
-        .from('usage_events')
-        .select('id', { count: 'exact', head: true })
-        .eq('organization_id', req.orgId)
-        .eq('event_type', 'booking')
-        .gte('created_at', monthStartISO)
-    ),
-
-    timedQuery(
-      'leads',
-      supabaseAdmin
-        .from('leads')
-        .select('id', { count: 'exact', head: true })
-        .eq('organization_id', req.orgId)
-    ),
-
-    timedQuery(
-      'documents',
-      supabaseAdmin
-        .from('documents')
-        .select('id', { count: 'exact', head: true })
-        .eq('organization_id', req.orgId)
-    ),
-  ]);
-
-  const messageQuota =
-    org?.monthly_message_quota ?? config.freeTierQuotas.messagesPerMonth;
+  const { count: docs } = await supabaseAdmin
+    .from('documents')
+    .select('id', { count: 'exact', head: true })
+    .eq('organization_id', req.orgId);
 
   console.log(`[ORG/ME] DB queries finished in ${Date.now() - started}ms`);
 
   res.json({
     org,
+    settings,
     role: req.role,
     usage: {
       messagesThisMonth: messages || 0,

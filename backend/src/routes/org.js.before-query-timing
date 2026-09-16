@@ -22,64 +22,49 @@ router.get('/me', requireAuth, async (req, res) => {
   const config = require('../config');
 
   // All independent queries run in parallel.
-  const timedQuery = async (name, query) => {
-    const start = Date.now();
-    const result = await query;
-    console.log(`[ORG/ME] ${name}: ${Date.now() - start}ms`);
-    return result;
-  };
-
   const [
     { data: org },
+    { data: settings },
     { count: messages },
     { count: bookings },
     { count: leadsCount },
     { count: docs },
   ] = await Promise.all([
-    timedQuery(
-      'organizations',
-      supabaseAdmin
-        .from('organizations')
-        .select('*')
-        .eq('id', req.orgId)
-        .single()
-    ),
+    supabaseAdmin
+      .from('organizations')
+      .select('*')
+      .eq('id', req.orgId)
+      .single(),
 
-    timedQuery(
-      'messages usage',
-      supabaseAdmin
-        .from('usage_events')
-        .select('id', { count: 'exact', head: true })
-        .eq('organization_id', req.orgId)
-        .eq('event_type', 'message')
-        .gte('created_at', monthStartISO)
-    ),
+    supabaseAdmin
+      .from('settings')
+      .select('*')
+      .eq('organization_id', req.orgId)
+      .maybeSingle(),
 
-    timedQuery(
-      'bookings usage',
-      supabaseAdmin
-        .from('usage_events')
-        .select('id', { count: 'exact', head: true })
-        .eq('organization_id', req.orgId)
-        .eq('event_type', 'booking')
-        .gte('created_at', monthStartISO)
-    ),
+    supabaseAdmin
+      .from('usage_events')
+      .select('id', { count: 'exact', head: true })
+      .eq('organization_id', req.orgId)
+      .eq('event_type', 'message')
+      .gte('created_at', monthStartISO),
 
-    timedQuery(
-      'leads',
-      supabaseAdmin
-        .from('leads')
-        .select('id', { count: 'exact', head: true })
-        .eq('organization_id', req.orgId)
-    ),
+    supabaseAdmin
+      .from('usage_events')
+      .select('id', { count: 'exact', head: true })
+      .eq('organization_id', req.orgId)
+      .eq('event_type', 'booking')
+      .gte('created_at', monthStartISO),
 
-    timedQuery(
-      'documents',
-      supabaseAdmin
-        .from('documents')
-        .select('id', { count: 'exact', head: true })
-        .eq('organization_id', req.orgId)
-    ),
+    supabaseAdmin
+      .from('leads')
+      .select('id', { count: 'exact', head: true })
+      .eq('organization_id', req.orgId),
+
+    supabaseAdmin
+      .from('documents')
+      .select('id', { count: 'exact', head: true })
+      .eq('organization_id', req.orgId),
   ]);
 
   const messageQuota =
@@ -89,6 +74,7 @@ router.get('/me', requireAuth, async (req, res) => {
 
   res.json({
     org,
+    settings,
     role: req.role,
     usage: {
       messagesThisMonth: messages || 0,

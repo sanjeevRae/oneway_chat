@@ -6,11 +6,6 @@ try { ws = require('ws'); } catch { /* optional */ }
 
 // Cache the anon client — creating one per request added 1.5-3s of latency
 let cachedAnonClient = null;
-
-// Short-lived profile cache to avoid repeated Supabase lookups
-// for the same authenticated user.
-const profileCache = new Map();
-const PROFILE_CACHE_TTL = 60 * 1000;
 function anonClient() {
   if (cachedAnonClient) return cachedAnonClient;
   cachedAnonClient = createClient(config.supabase.url, config.supabase.anonKey, {
@@ -53,42 +48,21 @@ async function requireAuth(req, res, next) {
     // Resolve tenant org + role for this user
     const supabaseAdmin = require('../lib/supabase');
 
-    let profile = null;
-    let pErr = null;
+    const profileStarted = Date.now();
+    console.log(`[AUTH] profile lookup user=${claims.sub}`);
 
-    const cached = profileCache.get(claims.sub);
+    const { data: profile, error: pErr } = await supabaseAdmin
+      .from('profiles')
+      .select('organization_id, role')
+      .eq('id', claims.sub)
+      .single();
 
-    if (cached && cached.expiresAt > Date.now()) {
-      profile = cached.profile;
-      console.log(`[AUTH] profile cache hit`);
-    } else {
-      const profileStarted = Date.now();
-
-      const result = await supabaseAdmin
-        .from('profiles')
-        .select('organization_id, role')
-        .eq('id', claims.sub)
-        .single();
-
-      profile = result.data;
-      pErr = result.error;
-
-      console.log(`[AUTH] profile query: ${Date.now() - profileStarted}ms`);
-
-      if (!pErr && profile?.organization_id) {
-        profileCache.set(claims.sub, {
-          profile,
-          expiresAt: Date.now() + PROFILE_CACHE_TTL,
-        });
-      }
-    }
-
+    console.log(`[AUTH] profile query: ${Date.now() - profileStarted}ms`);
     console.log(`[AUTH] total middleware: ${Date.now() - authStarted}ms`);
 
     if (pErr || !profile?.organization_id) {
       return res.status(403).json({ error: 'No organization found for user' });
     }
-
     req.orgId = profile.organization_id;
     req.role = profile.role || 'owner';
 

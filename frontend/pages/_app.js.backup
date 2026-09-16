@@ -11,48 +11,31 @@ export default function App({ Component, pageProps }) {
   const [loading, setLoading] = useState(true);
   const [role, setRole] = useState(null);
 
-  let roleRequest = null;
-
   useEffect(() => {
     let settled = false;
-
     const finish = () => {
       if (!settled) {
         settled = true;
         setLoading(false);
       }
     };
-
+    // Safety net: never leave the whole app stuck on the loading screen,
+    // even if the stored session/localStorage is corrupted.
     const failsafe = setTimeout(finish, 10000);
-
+    // Validate the stored session against Supabase — stale tokens are
+    // signed out automatically instead of producing 401s everywhere.
     getValidSession()
       .then((session) => {
         setUser(session?.user || null);
-
-        if (session) {
-          fetchRole(session.access_token);
-        } else {
-          setRole(null);
-        }
-
+        if (session) fetchRole(session.access_token);
         finish();
       })
-      .catch(() => {
-        setUser(null);
-        setRole(null);
-        finish();
-      });
-
+      .catch(() => finish());
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
       setUser(session?.user || null);
-
-      if (session) {
-        fetchRole(session.access_token);
-      } else {
-        setRole(null);
-      }
+      setRole(null);
+      if (session) fetchRole(session.access_token);
     });
-
     return () => {
       clearTimeout(failsafe);
       sub.subscription.unsubscribe();
@@ -60,31 +43,15 @@ export default function App({ Component, pageProps }) {
   }, []);
 
   async function fetchRole(token) {
-    if (!token) return;
-
-    // Reuse the same in-flight request instead of sending duplicates.
-    if (roleRequest) {
-      return roleRequest;
-    }
-
-    roleRequest = (async () => {
-      try {
-        const res = await fetchApi('/api/org/role', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          setRole(data.role || 'owner');
-        }
-      } catch {
-        // Ignore role-loading failures.
-      } finally {
-        roleRequest = null;
+    try {
+      const res = await fetchApi('/api/org/me', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setRole(data.role || 'owner');
       }
-    })();
-
-    return roleRequest;
+    } catch { /* ignore */ }
   }
 
   const nav = (
