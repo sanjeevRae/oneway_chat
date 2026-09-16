@@ -1,0 +1,27 @@
+const express = require("express");
+const cors = require("cors");
+const helmet = require("helmet");
+require("dotenv").config();
+
+const app = express();
+
+const PORT = process.env.PORT || 5000;
+
+app.use(helmet());
+app.use(cors());
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+
+app.get("/", (req, res) => {
+  res.status(200).send("OneWayChat API is running");
+});
+
+app.get("/health", (req, res) => {
+  res.status(200).json({
+    status: "healthy"
+  });
+});
+
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`OneWayChat API running on port ${PORT}`);
+});
