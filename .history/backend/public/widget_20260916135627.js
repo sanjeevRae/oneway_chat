@@ -18,7 +18,9 @@
 
   const API_BASE = url.origin + '/chat-api';
 
-
+  /* =========================
+     SESSION
+  ========================= */
 
   const sessionKey = 'onewaybot_session_' + orgId;
 
