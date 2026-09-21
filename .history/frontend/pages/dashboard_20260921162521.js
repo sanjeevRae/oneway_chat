@@ -151,9 +151,9 @@ export default function Dashboard() {
 
   const stats = [
     { label: 'Messages this month', value: `${usage.messagesThisMonth} / ${usage.messageQuota ?? 100}` },
-    { label: 'Appointments this month', value: usage.bookingsThisMonth },
-    { label: 'Total inquiries', value: usage.totalLeads },
-    { label: 'Trained docs', value: usage.documents },
+    { label: 'Bookings this month', value: usage.bookingsThisMonth },
+    { label: 'Total leads', value: usage.totalLeads },
+    { label: 'Knowledge docs', value: usage.documents },
   ];
 
   return (

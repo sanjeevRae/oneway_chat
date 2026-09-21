@@ -101,9 +101,9 @@ export default function App({ Component, pageProps }) {
             <>
               {[
                 ['/dashboard', 'Dashboard'],
-                ['/knowledge', 'Knowledge'],
-                ['/bookings', 'Bookings'],
-                ['/leads', 'Leads'],
+                ['/train', 'Train'],
+                ['/appointments', 'Appointments'],
+                ['/inquiries', 'Inquiries'],
                 ['/inbox', 'Inbox'],
               ].map(([href, label]) => (
                 <Link
@@ -147,9 +147,9 @@ export default function App({ Component, pageProps }) {
             <>
               {[
                 ['/dashboard', 'Home'],
-                ['/knowledge', 'Docs'],
-                ['/bookings', 'Bookings'],
-                ['/leads', 'Leads'],
+                ['/train', 'Train'],
+                ['/appointments', 'Appts'],
+                ['/inquiries', 'Inquiries'],
                 ['/inbox', 'Inbox'],
               ].map(([href, label]) => (
                 <Link

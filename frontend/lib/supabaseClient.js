@@ -10,8 +10,42 @@ const SUPABASE_ANON_KEY =
 
 export const supabase = createClient(
   SUPABASE_URL,
-  SUPABASE_ANON_KEY
+  SUPABASE_ANON_KEY,
+  {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: false,
+    },
+  }
 );
+
+/**
+ * Purge a dead Supabase session entirely from local storage.
+ *
+ * Used when the refresh token has been rejected (HTTP 400 from
+ * /auth/v1/token?grant_type=refresh_token). A normal signOut() tries to
+ * contact the server to revoke the token, which fails for a dead session
+ * and leaves the stale entry in localStorage — so the client keeps
+ * re-attempting the refresh on every tab focus. Cleaning up locally
+ * only stops that loop.
+ */
+export async function purgeDeadSession() {
+  try {
+    // 'local' scope: clear this device without calling the revoke endpoint.
+    await supabase.auth.signOut({ scope: 'local' });
+  } catch {
+    // Ignore — we clear storage manually below.
+  }
+
+  try {
+    Object.keys(localStorage)
+      .filter((key) => key.startsWith('sb-'))
+      .forEach((key) => localStorage.removeItem(key));
+  } catch {
+    // Ignore storage access errors (private mode, etc.).
+  }
+}
 
 // Backend API
 export const API_URL =
@@ -135,11 +169,7 @@ export async function api(
     res.status === 401 &&
     !path.startsWith('/api/auth')
   ) {
-    try {
-      await supabase.auth.signOut();
-    } catch {
-      // Ignore sign-out errors.
-    }
+    await purgeDeadSession();
 
     if (
       typeof window !== 'undefined'
@@ -182,11 +212,9 @@ export async function getValidSession() {
       error ||
       !data?.user
     ) {
-      try {
-        await supabase.auth.signOut();
-      } catch {
-        // Ignore.
-      }
+      // Dead/stale session — purge locally so the client stops
+      // re-attempting the (failing) token refresh.
+      await purgeDeadSession();
 
       return null;
     }

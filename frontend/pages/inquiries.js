@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../lib/supabaseClient';
 
-export default function Leads() {
+export default function Inquiries() {
   const [leads, setLeads] = useState([]);
   const [error, setError] = useState('');
 
@@ -14,7 +14,7 @@ export default function Leads() {
   useEffect(() => { load(); }, []);
 
   async function remove(id) {
-    if (!confirm('Delete this lead?')) return;
+    if (!confirm('Delete this inquiry?')) return;
     await api(`/api/leads/${id}`, { method: 'DELETE' });
     load();
   }
@@ -22,14 +22,14 @@ export default function Leads() {
   return (
     <main className="mx-auto max-w-4xl px-6 py-12">
       <p className="eyebrow mb-1">Visitors who shared their contact info with your bot</p>
-      <h1 className="mb-10 text-3xl font-semibold tracking-tight text-ink-900">Leads</h1>
+      <h1 className="mb-10 text-3xl font-semibold tracking-tight text-ink-900">Inquiries</h1>
 
       {error && <p className="mb-6 text-sm text-red-500">{error}</p>}
 
       <div className="space-y-2">
         {leads.length === 0 && (
           <div className="glass-card p-10 text-center text-sm text-ink-400">
-            No leads yet. When a visitor shares their name/phone/email in chat, they&apos;ll appear here.
+            No inquiries yet. When a visitor shares their name/phone/email in chat, they&apos;ll appear here.
           </div>
         )}
         {leads.map((l) => (

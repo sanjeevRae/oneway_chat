@@ -151,9 +151,9 @@ export default function Dashboard() {
 
   const stats = [
     { label: 'Messages this month', value: `${usage.messagesThisMonth} / ${usage.messageQuota ?? 100}` },
-    { label: 'Appointments this month', value: usage.bookingsThisMonth },
-    { label: 'Total inquiries', value: usage.totalLeads },
-    { label: 'Trained docs', value: usage.documents },
+    { label: 'Bookings this month', value: usage.bookingsThisMonth },
+    { label: 'Total leads', value: usage.totalLeads },
+    { label: 'Knowledge docs', value: usage.documents },
   ];
 
   return (
@@ -279,6 +279,9 @@ function InstallSection({ orgId }) {
         <pre className="overflow-x-auto break-all rounded-xl border border-white/60 bg-gray-900/[0.05] p-3 text-xs leading-relaxed text-ink-700">{botLink}</pre>
       </div>
 
+      <p className="text-xs leading-relaxed text-ink-400">
+        Tip: generate a QR code for the direct link to make a scan-to-chat card.
+      </p>
     </div>
   );
 }

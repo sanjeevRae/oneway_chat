@@ -93,8 +93,8 @@ export default function Admin() {
         {[
           ['Businesses', tenants.length, <BuildingIcon key="b" />],
           ['Messages this month', totalMessages, <MessageIcon key="m" />],
-          ['Total leads', tenants.reduce((s, t) => s + t.totalLeads, 0), <TargetIcon key="t" />],
-          ['Total bookings', tenants.reduce((s, t) => s + t.totalBookings, 0), <CalendarIcon key="c" />],
+          ['Total inquiries', tenants.reduce((s, t) => s + t.totalLeads, 0), <TargetIcon key="t" />],
+          ['Total appointments', tenants.reduce((s, t) => s + t.totalBookings, 0), <CalendarIcon key="c" />],
         ].map(([label, value, icon]) => (
           <div key={label} className="glass-hover p-5">
             <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl border border-white/70 bg-white/60 shadow-soft backdrop-blur">{icon}</div>
@@ -122,7 +122,7 @@ export default function Admin() {
               <th className="px-5 py-3 font-medium">Business</th>
               <th className="px-5 py-3 font-medium">Owner</th>
               <th className="px-5 py-3 font-medium">Usage / Quota</th>
-              <th className="hidden px-5 py-3 font-medium md:table-cell">Docs · Leads · Bookings</th>
+              <th className="hidden px-5 py-3 font-medium md:table-cell">Docs · Inquiries · Appointments</th>
               <th className="px-5 py-3 text-right font-medium">Extend usage</th>
             </tr>
           </thead>
@@ -160,7 +160,7 @@ export default function Admin() {
                     </div>
                   </td>
                   <td className="hidden px-5 py-3.5 text-xs text-ink-500 md:table-cell">
-                    {t.documents} docs · {t.totalLeads} leads · {t.totalBookings} bookings
+                    {t.documents} docs · {t.totalLeads} inquiries · {t.totalBookings} appointments
                   </td>
                   <td className="px-5 py-3.5 text-right">
                     {editing === t.id ? (

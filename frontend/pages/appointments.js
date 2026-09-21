@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../lib/supabaseClient';
 
-export default function Bookings() {
+export default function Appointments() {
   const [bookings, setBookings] = useState([]);
   const [error, setError] = useState('');
 
@@ -23,10 +23,10 @@ export default function Bookings() {
       {/* Page header */}
       <div className="mb-8 flex flex-col justify-between gap-4 border-b border-gray-200 pb-6 sm:flex-row sm:items-end">
         <div>
-          <h1 className="h-display text-2xl sm:text-[28px]">Bookings</h1>
+          <h1 className="h-display text-2xl sm:text-[28px]">Appointments</h1>
           <p className="mt-1 text-sm text-ink-500">Appointments your bot has made with customers.</p>
         </div>
-        <span className="chip w-fit">{bookings.length} booking{bookings.length === 1 ? '' : 's'}</span>
+        <span className="chip w-fit">{bookings.length} appointment{bookings.length === 1 ? '' : 's'}</span>
       </div>
 
       {error && (
@@ -35,7 +35,7 @@ export default function Bookings() {
 
       {bookings.length === 0 ? (
         <div className="card p-12 text-center">
-          <p className="text-sm font-medium text-ink-700">No bookings yet</p>
+          <p className="text-sm font-medium text-ink-700">No appointments yet</p>
           <p className="mx-auto mt-1 max-w-sm text-sm text-ink-400">
             Your bot will create them automatically when customers ask to book.
           </p>
