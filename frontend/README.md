@@ -13,6 +13,7 @@ Next.js 14 + Tailwind dashboard for the OneWayChat platform. Deployed on **Verce
 | `/train` | Train the bot: crawl / upload / manual text |
 | `/appointments` | View & manage bot-made appointments |
 | `/inquiries` | Captured inquiries |
+| `/settings` | Business details & bot personality |
 | `/settings` | Bot name, welcome message, color, notifications, API keys |
 
 ## Local Setup

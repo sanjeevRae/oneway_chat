@@ -105,6 +105,7 @@ export default function App({ Component, pageProps }) {
                 ['/appointments', 'Appointments'],
                 ['/inquiries', 'Inquiries'],
                 ['/inbox', 'Inbox'],
+                ['/settings', 'Settings'],
               ].map(([href, label]) => (
                 <Link
                   key={href}
@@ -151,6 +152,7 @@ export default function App({ Component, pageProps }) {
                 ['/appointments', 'Appts'],
                 ['/inquiries', 'Inquiries'],
                 ['/inbox', 'Inbox'],
+                ['/settings', 'Settings'],
               ].map(([href, label]) => (
                 <Link
                   key={href}
