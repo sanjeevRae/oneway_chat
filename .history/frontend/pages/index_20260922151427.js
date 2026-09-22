@@ -253,13 +253,13 @@ const CTA_CARDS = [
   },
   {
     src: '/components/leads.webp',
-    bg: 'bg-gray-100',
+    bg: 'bg-brand-50',
     title: 'Capture More Leads',
     body: 'Turn website visitors and conversations into qualified leads by collecting the right information at the right time.',
   },
   {
     src: '/components/queries.webp',
-    bg: 'bg-gray-100',
+    bg: 'bg-brand-100',
     title: 'Automate Repetitive Work',
     body: 'Handle routine conversations, inquiries, bookings, and other repetitive tasks automatically so your team can focus on what matters.',
   },

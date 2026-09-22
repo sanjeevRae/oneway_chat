@@ -58,7 +58,7 @@ function About() {
           </div>
 
           {/* Keep Track & History — chat bubbles */}
-          <div className="rounded-2xl bg-#D4DFFE p-7 lg:col-span-4">
+          <div className="rounded-2xl bg-brand-50 p-7 lg:col-span-4">
             <h3 className="text-xl font-bold text-ink-900">Keep Track &amp; History</h3>
             <div className="mt-5 space-y-3">
               <div className="rounded-xl bg-white p-3.5 text-[13px] leading-snug text-ink-700 shadow-sm">
@@ -253,13 +253,13 @@ const CTA_CARDS = [
   },
   {
     src: '/components/leads.webp',
-    bg: 'bg-gray-100',
+    bg: 'bg-brand-50',
     title: 'Capture More Leads',
     body: 'Turn website visitors and conversations into qualified leads by collecting the right information at the right time.',
   },
   {
     src: '/components/queries.webp',
-    bg: 'bg-gray-100',
+    bg: 'bg-brand-100',
     title: 'Automate Repetitive Work',
     body: 'Handle routine conversations, inquiries, bookings, and other repetitive tasks automatically so your team can focus on what matters.',
   },
