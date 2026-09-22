@@ -206,7 +206,7 @@ const FEATURES = [
   },
   {
     title: 'Lead Capture Bot',
-    body: 'When a visitor shares their name, phone or email in chat, the bot captures it as an inquiry. Leads are collected in your dashboard with contact details and notes, so nothing slips through even outside business hours, every conversation becomes a potential customer.',
+    body: 'When a visitor shares their name, phone or email in chat, the bot captures it as an inquiry. Leads are collected in your dashboard with contact details and notes, so nothing slips through — even outside business hours, every conversation becomes a potential customer.',
     cta: 'Try Leads Bot',
   },
 ];

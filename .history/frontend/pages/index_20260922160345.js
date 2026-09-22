@@ -196,17 +196,17 @@ function ArrowRightIcon() {
 const FEATURES = [
   {
     title: 'Customer Support Bot',
-    body: 'This bot answers your customers instantly from your own knowledge base website pages, documents and FAQs. Response within seconds removes long waiting times, and the answers are precise and well-presented for quick understanding. Your team can easily add or edit the data the bot learns from.',
+    body: 'This bot answers your customers instantly from your own knowledge base — website pages, documents and FAQs. Response within seconds removes long waiting times, and the answers are precise and well-presented for quick understanding. Your team can easily add or edit the data the bot learns from.',
     cta: 'Try Support Bot',
   },
   {
     title: 'Appointments & Bookings Bot',
-    body: 'The bot books appointments automatically when customers ask capturing the time, party details and contact information. Bookings appear in your dashboard where you can confirm, complete or cancel them, and every booking is tracked in your monthly usage.',
+    body: 'The bot books appointments automatically when customers ask — capturing the time, party details and contact information. Bookings appear in your dashboard where you can confirm, complete or cancel them, and every booking is tracked in your monthly usage.',
     cta: 'Try Booking Bot',
   },
   {
     title: 'Lead Capture Bot',
-    body: 'When a visitor shares their name, phone or email in chat, the bot captures it as an inquiry. Leads are collected in your dashboard with contact details and notes, so nothing slips through even outside business hours, every conversation becomes a potential customer.',
+    body: 'When a visitor shares their name, phone or email in chat, the bot captures it as an inquiry. Leads are collected in your dashboard with contact details and notes, so nothing slips through — even outside business hours, every conversation becomes a potential customer.',
     cta: 'Try Leads Bot',
   },
 ];
