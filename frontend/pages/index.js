@@ -97,7 +97,7 @@ function About() {
                 alt="Rocket illustration"
                 width="240"
                 height="240"
-                className="absolute bottom-0 left-full z-10 h-[85%] w-auto max-w-none -translate-x-1/2 object-contain"
+                className="absolute bottom-0 left-full z-10 h-full w-auto max-w-none -translate-x-1/2 object-contain"
               />
             </div>
           </div>
