@@ -125,7 +125,9 @@ function Hero() {
           </h1>
 
           <p className="mt-6 max-w-lg text-[15px] leading-relaxed text-ink-500">
-           OneWayChat helps businesses turn their knowledge into intelligent AI conversations that improve customer support, automate repetitive tasks, and drive more engagement.
+            OneWayChat builds AI chatbots that answer your customers from your own
+            content — your website, documents and FAQs. Embed it on any site or
+            share it as a direct chat link.
           </p>
 
           <form
