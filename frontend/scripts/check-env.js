@@ -64,6 +64,7 @@ const REQUIRED = [
   'NEXT_PUBLIC_SUPABASE_URL',
   'NEXT_PUBLIC_SUPABASE_ANON_KEY',
   'NEXT_PUBLIC_API_URL',
+  'NEXT_PUBLIC_DEMO_ORG_ID',
 ];
 
 const missing = REQUIRED.filter((key) => !String(env[key] || '').trim());
@@ -82,6 +83,7 @@ if (missing.length) {
   console.error('      NEXT_PUBLIC_API_URL=https://onewaynepal.com/chat-api');
   console.error('      NEXT_PUBLIC_SUPABASE_URL=https://<project>.supabase.co');
   console.error('      NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon public key>');
+  console.error('      NEXT_PUBLIC_DEMO_ORG_ID=<organization id powering the demo widget>');
   console.error('');
   console.error('  (.env*.local is gitignored — git pull will never bring it along.)');
   console.error('');

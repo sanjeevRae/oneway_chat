@@ -2,6 +2,7 @@
 // All sections built: Hero, About, Features, CTA, Footer.
 
 import Link from 'next/link';
+import Script from 'next/script';
 import { useRouter } from 'next/router';
 
 function ArrowUpRightIcon() {
@@ -438,6 +439,17 @@ export default function Home() {
       <Features />
       <Cta />
       <Footer />
+
+      {/* Live demo of the product itself: the same embeddable widget customers
+          paste into their own sites. The script draws the bottom-right chat
+          bubble, loads the welcome message from /api/chat/config/:orgId and
+          talks to POST /api/chat. Uses lazyOnload so it never blocks LCP. */}
+      {process.env.NEXT_PUBLIC_DEMO_ORG_ID ? (
+        <Script
+          src={`${String(process.env.NEXT_PUBLIC_API_URL || '').replace(/\/+$/, '')}/widget.js?org=${process.env.NEXT_PUBLIC_DEMO_ORG_ID}`}
+          strategy="lazyOnload"
+        />
+      ) : null}
     </main>
   );
 }
