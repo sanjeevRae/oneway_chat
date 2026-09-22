@@ -35,7 +35,7 @@ function About() {
   const { basePath } = useRouter();
 
   return (
-    <section id="about" className="bg-white py-20 sm:py-24">
+    <section id="about" className="overflow-x-clip bg-white py-20 sm:py-24">
       <div className="mx-auto max-w-6xl px-6">
         {/* Heading + intro copy */}
         <h2 className="text-3xl font-bold tracking-tight text-ink-900 sm:text-4xl">About the tool</h2>
@@ -57,10 +57,10 @@ function About() {
 
         {/* Bento grid */}
         <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-12">
-          {/* Smart AI Search — big card with screenshot placeholder */}
+          {/* Manage Everything */}
           <div className="relative flex flex-col rounded-2xl bg-gray-100 p-7 sm:col-span-2 sm:p-8 lg:col-span-5 lg:row-span-2">
             <h3 className="flex items-center gap-1.5 text-2xl font-bold text-brand-600">
-              Smart AI Search
+              Manage Everything
               <ArrowUpRightIcon />
             </h3>
             <div className="absolute bottom-0 right-0 h-[260px] w-full">
@@ -74,34 +74,37 @@ function About() {
 
           {/* Keep Track & History — chat bubbles */}
           <div className="rounded-2xl bg-[#D4DFFE] p-7 lg:col-span-4">
-            <h3 className="text-xl font-bold text-ink-900">Keep Track &amp; History</h3>
+            <h3 className="text-xl font-bold text-ink-900">Helpful Responses</h3>
             <div className="mt-5 space-y-3">
               <div className="rounded-xl bg-white p-3.5 text-[13px] leading-snug text-ink-700 shadow-sm">
-                <ChatIcon className="mr-1.5 text-ink-400" /> Give me a list of my appointments from this week
+                <ChatIcon className="mr-1.5 text-ink-400" /> I’d like to schedule an appointment.
               </div>
               <div className="rounded-xl bg-white p-3.5 text-[13px] leading-snug text-ink-700 shadow-sm">
-                <ChatIcon className="mr-1.5 text-ink-400" /> How can I book a service at your business?
+                <ChatIcon className="mr-1.5 text-ink-400" /> What services do you offer?
               </div>
             </div>
           </div>
 
-          {/* {Fast Smooth Response} */}
+          {/* Fast & Reliable Answers — rocket centered on the card's right border:
+              left-full + -translate-x-1/2 puts the image's exact midpoint on the
+              edge, so half the rocket sits outside the card. Sized by height
+              (h-[85%] of the tall row) so it can never overlap the heading. */}
           <div className="relative flex flex-col rounded-2xl bg-[#FEEFDB] p-7 lg:col-span-3 lg:row-span-2">
-            <h3 className="text-xl font-bold text-ink-900">Fast &amp; Smooth Response</h3>
-            <div className="relative mt-5 flex-1">
+            <h3 className="text-xl font-bold text-ink-900">Fast &amp; Reliable Answers</h3>
+            <div className="relative -mr-7 mt-5 flex-1">
               <img
                 src={`${basePath}/components/rocket.png`}
                 alt="Rocket illustration"
                 width="240"
                 height="240"
-                className="absolute bottom-0 right-[-11%] z-10 w-[110%] max-w-none object-contain"
+                className="absolute bottom-0 left-full z-10 h-[85%] w-auto max-w-none -translate-x-1/2 object-contain"
               />
             </div>
           </div>
 
           {/* Informative & Insightful Data — FAQ image flows under the text */}
           <div className="relative flex flex-col rounded-2xl bg-brand-100 p-7 lg:col-span-4">
-            <h3 className="text-xl font-bold text-ink-900">Informative &amp;  <br /> Insightful Data</h3>
+            <h3 className="text-xl font-bold text-ink-900">Intelligent &amp;  <br />  Helpful Responses</h3>
             <div className="mt-auto flex justify-end pt-4">
               <img
                 src={`${basePath}/components/faq.png`}
