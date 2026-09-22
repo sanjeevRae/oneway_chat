@@ -39,18 +39,17 @@ function About() {
         {/* Bento grid */}
         <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-12">
           {/* Smart AI Search — big card with screenshot placeholder */}
-          <div className="relative flex flex-col rounded-2xl bg-gray-100 p-7 sm:col-span-2 sm:p-8 lg:col-span-5 lg:row-span-2">
+          <div className="flex flex-col rounded-2xl bg-gray-100 p-7 sm:col-span-2 sm:p-8 lg:col-span-5 lg:row-span-2">
             <h3 className="flex items-center gap-1.5 text-2xl font-bold text-brand-600">
               Smart AI Search
               <ArrowUpRightIcon />
             </h3>
-            <div className="absolute bottom-0 right-0 h-[180px] w-[90%] flex items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-white/70 p-6 text-center">
-              <Image
-                src="/components/dashboard.png"
-                alt="Dashboard screenshot"
-                className="h-full w-full object-contain"
-                priority
-              />
+            <div className="mt-6 flex min-h-[240px] flex-1 items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-white/70 p-6 text-center">
+              <span className="text-sm text-ink-400">
+                Screenshot placeholder
+                <br />
+                (add your image here)
+              </span>
             </div>
           </div>
 
@@ -83,16 +82,9 @@ function About() {
           </div>
 
           {/* Informative & Insightful Data */}
-          <div className="relative rounded-2xl bg-brand-100 p-7 lg:col-span-4">
+          <div className="rounded-2xl bg-brand-100 p-7 lg:col-span-4">
             <h3 className="text-xl font-bold text-ink-900">Informative &amp; Insightful Data</h3>
-            <div className="absolute bottom-0 right-0 h-12 w-[25%]">
-              <Image
-                src="/components/faq.png"
-                alt="FAQ illustration"
-                className="h-full w-full object-contain"
-                priority
-              />
-            </div>
+           
           </div>
         </div>
       </div>
@@ -251,19 +243,19 @@ function Features() {
 
 const CTA_CARDS = [
   {
-    src: '/components/assistance.webp',
+    icon: '🧩',
     bg: 'bg-gray-100',
     title: 'Instant Customer Support',
     body: 'Answer common questions instantly and give customers helpful information without making them wait for your team.',
   },
   {
-    src: '/components/leads.webp',
+    icon: '📄',
     bg: 'bg-brand-50',
     title: 'Capture More Leads',
     body: 'Turn website visitors and conversations into qualified leads by collecting the right information at the right time.',
   },
   {
-    src: '/components/queries.webp',
+    icon: '💡',
     bg: 'bg-brand-100',
     title: 'Automate Repetitive Work',
     body: 'Handle routine conversations, inquiries, bookings, and other repetitive tasks automatically so your team can focus on what matters.',
@@ -286,14 +278,7 @@ function Cta() {
           <div className="mt-12 grid gap-6 sm:grid-cols-3">
             {CTA_CARDS.map((card) => (
               <div key={card.title} className={`rounded-2xl px-7 py-10 text-center ${card.bg}`}>
-                <div className="mx-auto mb-4 w-14">
-                  <Image
-                    src={card.src}
-                    alt={card.title}
-                    className="h-auto w-full"
-                    priority
-                  />
-                </div>
+                <div className="text-4xl" aria-hidden="true">{card.icon}</div>
                 <h3 className="mt-4 text-lg font-bold text-ink-900">{card.title}</h3>
                 <p className="mt-2 text-[13px] leading-relaxed text-ink-500">{card.body}</p>
               </div>
