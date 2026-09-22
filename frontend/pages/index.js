@@ -40,19 +40,18 @@ function About() {
         {/* Heading + intro copy */}
         <h2 className="text-3xl font-bold tracking-tight text-ink-900 sm:text-4xl">About the tool</h2>
 
-        <div className="mt-6 max-w-3xl space-y-4 text-[15px] leading-relaxed text-ink-500">
+        <div className="mt-6 max-w-4xl space-y-4 text-[15px] leading-relaxed text-ink-500">
           <p>
-           OneWayChat gives your business an AI chat assistant that answers customers 
-           instantly using your own knowledge including your website, documents, FAQs, 
-           and more. Add it to any website with an easy-to-embed widget or share it 
+           OneWayChat gives your business an AI chat assistant that answers customers
+           instantly using your own knowledge including your website, documents, FAQs,
+           and more. Add it to any website with an easy-to-embed widget or share it
            through a direct chat link.
           </p>
           <p>
-            Instead of making customers search through pages of information, OneWayChat 
+            Instead of making customers search through pages of information, OneWayChat
             delivers clear answers in seconds and can point back to the relevant source.
-             Keep support, sales, and everyday customer questions moving 24/7 with an 
+             Keep support, sales, and everyday customer questions moving 24/7 with an
              AI assistant built around your business.
-.
           </p>
         </div>
 
@@ -86,7 +85,10 @@ function About() {
             </div>
           </div>
 
-          {/* Fast & Smooth Response — rocket straddles the card's right edge */}
+          {/* Fast & Smooth Response — rocket straddles the card's right edge:
+              w-[110%] makes the image 10% wider than the card's content box,
+              right-[-11%] shifts it right by 11% of that box (= 10% of the
+              image's own width), so exactly 1/10th hangs outside the card. */}
           <div className="relative flex flex-col rounded-2xl bg-[#FEEFDB] p-7 lg:col-span-3 lg:row-span-2">
             <h3 className="text-xl font-bold text-ink-900">Fast &amp; Smooth Response</h3>
             <div className="relative mt-5 flex-1">
@@ -95,7 +97,7 @@ function About() {
                 alt="Rocket illustration"
                 width="240"
                 height="240"
-                className="absolute bottom-0 right-0 z-10 w-[110%] max-w-none translate-x-[9%] object-contain"
+                className="absolute bottom-0 right-[-11%] z-10 w-[110%] max-w-none object-contain"
               />
             </div>
           </div>
