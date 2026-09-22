@@ -64,7 +64,7 @@ function About() {
               Smart AI Search
               <ArrowUpRightIcon />
             </h3>
-            <div className="absolute bottom-0 right-0 h-[220px] w-[95%]">
+            <div className="absolute bottom-0 right-0 h-[260px] w-full">
               <img
                 src={`${basePath}/components/dashboard.png`}
                 alt="Dashboard screenshot"
@@ -86,28 +86,28 @@ function About() {
             </div>
           </div>
 
-          {/* Fast & Smooth Response — tall card, illustration placeholder */}
+          {/* Fast & Smooth Response — rocket straddles the card's right edge */}
           <div className="relative flex flex-col rounded-2xl bg-[#FEEFDB] p-7 lg:col-span-3 lg:row-span-2">
             <h3 className="text-xl font-bold text-ink-900">Fast &amp; Smooth Response</h3>
-            <div className="mt-5 flex-1 relative">
+            <div className="relative mt-5 flex-1">
               <img
                 src={`${basePath}/components/rocket.png`}
                 alt="Rocket illustration"
-                width="200"
-                height="176"
-                className="absolute right-[24px] bottom-0 z-10 object-contain -mr-[80px]"
+                width="240"
+                height="240"
+                className="absolute bottom-0 right-0 z-10 w-[110%] max-w-none translate-x-[9%] object-contain"
               />
             </div>
           </div>
 
-          {/* Informative & Insightful Data */}
-          <div className="relative rounded-2xl bg-brand-100 p-7 lg:col-span-4">
+          {/* Informative & Insightful Data — FAQ image flows under the text */}
+          <div className="relative flex flex-col rounded-2xl bg-brand-100 p-7 lg:col-span-4">
             <h3 className="text-xl font-bold text-ink-900">Informative &amp; Insightful Data</h3>
-            <div className="absolute bottom-0 right-0 h-12 w-[25%]">
+            <div className="mt-auto flex justify-end pt-4">
               <img
                 src={`${basePath}/components/faq.png`}
                 alt="FAQ illustration"
-                className="h-full w-full object-contain"
+                className="h-16 w-auto object-contain"
               />
             </div>
           </div>
@@ -167,7 +167,7 @@ function Hero() {
           <img
             src={`${basePath}/components/hero.webp`}
             alt="Hero illustration"
-            className="relative h-auto w-full max-w-md object-contain sm:max-w-xl lg:-mr-6 lg:w-[calc(100%+1.5rem)] lg:max-w-none"
+            className="relative h-auto w-full max-w-lg object-contain sm:max-w-2xl lg:-mr-6 lg:w-[calc(100%+2.5rem)] lg:max-w-none"
           />
         </div>
       </div>
