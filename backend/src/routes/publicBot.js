@@ -42,6 +42,16 @@ router.get('/bot/:orgId', async (req, res) => {
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
 
+    const safeWelcome = String(
+      settings?.welcome_message ||
+        'Hi! How can I help you today?'
+    )
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+
     res.setHeader(
       'Content-Type',
       'text/html; charset=utf-8'
@@ -167,7 +177,7 @@ router.get('/bot/:orgId', async (req, res) => {
 
 </head>
 
-<body>
+<body data-bot-welcome="${safeWelcome}">
 
   <div class="container">
 

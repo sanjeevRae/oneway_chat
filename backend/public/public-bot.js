@@ -85,10 +85,18 @@
   |--------------------------------------------------------------------------
   | Welcome message
   |--------------------------------------------------------------------------
+  |
+  | Injected server-side by the bot page (data-bot-welcome);
+  | falls back to the default when missing.
+  |
   */
 
+  const welcomeMessage =
+    document.body.dataset.botWelcome ||
+    'Hi! How can I help you today?';
+
   addMessage(
-    'Hi! How can I help you today?',
+    welcomeMessage,
     'bot'
   );
 

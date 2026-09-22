@@ -18,6 +18,18 @@
 
   const API_BASE = url.origin + '/chat-api';
 
+  /*
+
+    Welcome message.
+
+    Loaded from the public bot config endpoint below;
+    this default is only used until/if it responds.
+
+  */
+
+  let welcomeMessage =
+    'Hi! How can I help you today?';
+
 
 
   const sessionKey = 'onewaybot_session_' + orgId;
@@ -509,6 +521,50 @@
     );
 
   /* =========================
+     LOAD BOT SETTINGS
+  ========================= */
+
+  (async () => {
+
+    try {
+
+      const response =
+        await fetch(
+          API_BASE +
+            '/api/chat/config/' +
+            encodeURIComponent(orgId)
+        );
+
+      if (!response.ok) return;
+
+      const data =
+        await response.json();
+
+      if (data.welcomeMessage) {
+        welcomeMessage =
+          data.welcomeMessage;
+      }
+
+      if (data.botName) {
+
+        const header =
+          document.querySelector(
+            '#onewaybot-header span'
+          );
+
+        if (header) {
+          header.textContent =
+            data.botName;
+        }
+      }
+
+    } catch {
+      // Keep defaults.
+    }
+
+  })();
+
+  /* =========================
      ESCAPE HTML
   ========================= */
 
@@ -888,7 +944,7 @@
       messages.dataset.welcome = '1';
 
       addMessage(
-        'Hi! How can I help you today?',
+        welcomeMessage,
         'bot'
       );
     }

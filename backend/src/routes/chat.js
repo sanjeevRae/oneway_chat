@@ -129,4 +129,31 @@ router.post('/', async (req, res) => {
   }
 });
 
+/**
+ * GET /api/chat/config/:orgId
+ * Public bot configuration (bot name + welcome message) for the
+ * embeddable widget and hosted bot page. Only exposes settings
+ * that are safe to be public.
+ */
+router.get('/config/:orgId', async (req, res) => {
+  try {
+    const { orgId } = req.params;
+
+    const { data: settings, error } = await supabaseAdmin
+      .from('settings')
+      .select('bot_name, welcome_message')
+      .eq('organization_id', orgId)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    res.json({
+      botName: settings?.bot_name || null,
+      welcomeMessage: settings?.welcome_message || null,
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to load bot config' });
+  }
+});
+
 module.exports = router;
