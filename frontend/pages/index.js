@@ -86,19 +86,19 @@ function About() {
             </div>
           </div>
 
-          {/* Fast & Reliable Answers — rocket centered on the card's right border:
-              left-full + -translate-x-1/2 puts the image's exact midpoint on the
-              edge, so half the rocket sits outside the card. Sized by height
-              (h-[85%] of the tall row) so it can never overlap the heading. */}
+          {/* Fast & Reliable Answers — rocket straddling the card's right edge:
+              h-[110%] overflows slightly above the wrapper (bottom-anchored) for
+              extra size; -translate-x-[60%] places 60% of the image inside the
+              card and 40% outside. The heading sits above it via z-20. */}
           <div className="relative flex flex-col rounded-2xl bg-[#FEEFDB] p-7 lg:col-span-3 lg:row-span-2">
-            <h3 className="text-xl font-bold text-ink-900">Fast &amp; Reliable Answers</h3>
+            <h3 className="relative z-20 text-xl font-bold text-ink-900">Fast &amp; Reliable Answers</h3>
             <div className="relative -mr-7 mt-5 flex-1">
               <img
                 src={`${basePath}/components/rocket.png`}
                 alt="Rocket illustration"
                 width="240"
                 height="240"
-                className="absolute bottom-0 left-full z-10 h-full w-auto max-w-none -translate-x-1/2 object-contain"
+                className="absolute bottom-0 left-full z-10 h-[110%] w-auto max-w-none -translate-x-[60%] object-contain"
               />
             </div>
           </div>
