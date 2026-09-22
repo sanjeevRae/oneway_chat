@@ -2,7 +2,7 @@
 // All sections built: Hero, About, Features, CTA, Footer.
 
 import Link from 'next/link';
-import Image from 'next/image';
+import { useRouter } from 'next/router';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faComments } from '@fortawesome/free-solid-svg-icons';
 
@@ -16,6 +16,8 @@ function ArrowUpRightIcon() {
 }
 
 function About() {
+  const { basePath } = useRouter();
+
   return (
     <section id="about" className="bg-white py-20 sm:py-24">
       <div className="mx-auto max-w-6xl px-6">
@@ -45,12 +47,10 @@ function About() {
               <ArrowUpRightIcon />
             </h3>
             <div className="absolute bottom-0 right-0 h-[180px] w-[90%] flex items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-white/70 p-6 text-center">
-              <Image
-                src="/components/dashboard.png"
+              <img
+                src={`${basePath}/components/dashboard.png`}
                 alt="Dashboard screenshot"
                 className="h-full w-full object-contain"
-                unoptimized
-                priority
               />
             </div>
           </div>
@@ -72,14 +72,12 @@ function About() {
           <div className="relative flex flex-col rounded-2xl border border-gray-100 bg-white p-7 lg:col-span-3 lg:row-span-2">
             <h3 className="text-xl font-bold text-ink-900">Fast &amp; Smooth Response</h3>
             <div className="mt-5 flex-1 relative">
-              <Image
-                src="/components/rocket.png"
+              <img
+                src={`${basePath}/components/rocket.png`}
                 alt="Rocket illustration"
-                width={200}
-                height={176}
+                width="200"
+                height="176"
                 className="absolute right-[24px] bottom-0 z-10 object-contain -mr-[80px]"
-                unoptimized
-                priority
               />
             </div>
           </div>
@@ -88,12 +86,10 @@ function About() {
           <div className="relative rounded-2xl bg-brand-100 p-7 lg:col-span-4">
             <h3 className="text-xl font-bold text-ink-900">Informative &amp; Insightful Data</h3>
             <div className="absolute bottom-0 right-0 h-12 w-[25%]">
-              <Image
-                src="/components/faq.png"
+              <img
+                src={`${basePath}/components/faq.png`}
                 alt="FAQ illustration"
                 className="h-full w-full object-contain"
-                unoptimized
-                priority
               />
             </div>
           </div>
@@ -113,6 +109,8 @@ function SearchIcon() {
 }
 
 function Hero() {
+  const { basePath } = useRouter();
+
   return (
     <section id="hero" className="relative overflow-hidden bg-white">
       <div className="relative mx-auto grid max-w-6xl items-center gap-14 px-6 pb-20 pt-14 sm:pt-20 lg:grid-cols-[58%_42%] lg:gap-0">
@@ -149,13 +147,10 @@ function Hero() {
             className="absolute h-72 w-72 rounded-full bg-brand-50 sm:h-96 sm:w-96 lg:hidden lg:w-[40%] lg:h-[40%]"
           />
           <div className="relative flex h-full max-w-full items-center justify-center rounded-3xl border-2 border-dashed border-brand-300 bg-white/70 text-center sm:h-96 sm:w-96 lg:h-[40%] lg:w-full overflow-hidden">
-            <Image
-              src="/components/hero.webp"
+            <img
+              src={`${basePath}/components/hero.webp`}
               alt="Hero illustration"
-              fill
-              className="object-contain"
-              unoptimized
-              priority
+              className="h-full w-full object-contain"
             />
           </div>
         </div>
@@ -271,6 +266,8 @@ const CTA_CARDS = [
 ];
 
 function Cta() {
+  const { basePath } = useRouter();
+
   return (
     <>
       {/* Value cards */}
@@ -287,12 +284,10 @@ function Cta() {
             {CTA_CARDS.map((card) => (
               <div key={card.title} className={`rounded-2xl px-7 py-10 text-center ${card.bg}`}>
                 <div className="mx-auto mb-4 w-14">
-                  <Image
-                    src={card.src}
+                  <img
+                    src={`${basePath}${card.src}`}
                     alt={card.title}
                     className="h-auto w-full"
-                    unoptimized
-                    priority
                   />
                 </div>
                 <h3 className="mt-4 text-lg font-bold text-ink-900">{card.title}</h3>
