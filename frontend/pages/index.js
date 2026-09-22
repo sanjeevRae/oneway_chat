@@ -49,6 +49,7 @@ function About() {
                 src="/components/dashboard.png"
                 alt="Dashboard screenshot"
                 className="h-full w-full object-contain"
+                unoptimized
                 priority
               />
             </div>
@@ -77,6 +78,7 @@ function About() {
                 width={200}
                 height={176}
                 className="absolute right-[24px] bottom-0 z-10 object-contain -mr-[80px]"
+                unoptimized
                 priority
               />
             </div>
@@ -90,6 +92,7 @@ function About() {
                 src="/components/faq.png"
                 alt="FAQ illustration"
                 className="h-full w-full object-contain"
+                unoptimized
                 priority
               />
             </div>
@@ -155,6 +158,7 @@ function Hero() {
               alt="Hero illustration"
               fill
               className="object-contain"
+              unoptimized
               priority
             />
           </div>
@@ -291,6 +295,7 @@ function Cta() {
                     src={card.src}
                     alt={card.title}
                     className="h-auto w-full"
+                    unoptimized
                     priority
                   />
                 </div>
