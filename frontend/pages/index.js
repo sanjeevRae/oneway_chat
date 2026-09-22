@@ -48,7 +48,7 @@ function About() {
               Smart AI Search
               <ArrowUpRightIcon />
             </h3>
-            <div className="absolute bottom-0 right-0 h-[180px] w-[90%]">
+            <div className="absolute bottom-0 right-0 h-[220px] w-[95%]">
               <img
                 src={`${basePath}/components/dashboard.png`}
                 alt="Dashboard screenshot"
@@ -58,7 +58,7 @@ function About() {
           </div>
 
           {/* Keep Track & History — chat bubbles */}
-          <div className="rounded-2xl bg-#D4DFFE p-7 lg:col-span-4">
+          <div className="rounded-2xl bg-[#D4DFFE] p-7 lg:col-span-4">
             <h3 className="text-xl font-bold text-ink-900">Keep Track &amp; History</h3>
             <div className="mt-5 space-y-3">
               <div className="rounded-xl bg-white p-3.5 text-[13px] leading-snug text-ink-700 shadow-sm">
@@ -71,7 +71,7 @@ function About() {
           </div>
 
           {/* Fast & Smooth Response — tall card, illustration placeholder */}
-          <div className="relative flex flex-col rounded-2xl border border-gray-100 bg-#FEEFDB p-7 lg:col-span-3 lg:row-span-2">
+          <div className="relative flex flex-col rounded-2xl bg-[#FEEFDB] p-7 lg:col-span-3 lg:row-span-2">
             <h3 className="text-xl font-bold text-ink-900">Fast &amp; Smooth Response</h3>
             <div className="mt-5 flex-1 relative">
               <img
