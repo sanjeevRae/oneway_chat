@@ -46,11 +46,11 @@ function About() {
               Smart AI Search
               <ArrowUpRightIcon />
             </h3>
-            <div className="absolute bottom-0 right-0 h-[180px] w-[90%] flex items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-white/70 p-6 text-center">
+            <div className="absolute bottom-0 right-0 h-[180px] w-[90%]">
               <img
                 src={`${basePath}/components/dashboard.png`}
                 alt="Dashboard screenshot"
-                className="h-full w-full object-contain"
+                className="h-full w-full object-contain object-bottom"
               />
             </div>
           </div>
@@ -140,19 +140,17 @@ function Hero() {
           </form>
         </div>
 
-        {/* Right — image placeholder (add your image here) */}
-        <div className="relative flex items-center justify-center py-6 lg:py-0 lg:max-w-[40%]">
+        {/* Right — hero illustration, bleeds to the screen edge on desktop */}
+        <div className="relative flex items-center justify-center py-6 lg:justify-end lg:py-0">
           <div
             aria-hidden="true"
-            className="absolute h-72 w-72 rounded-full bg-brand-50 sm:h-96 sm:w-96 lg:hidden lg:w-[40%] lg:h-[40%]"
+            className="absolute h-72 w-72 rounded-full bg-brand-50 sm:h-96 sm:w-96 lg:hidden"
           />
-          <div className="relative flex h-full max-w-full items-center justify-center rounded-3xl border-2 border-dashed border-brand-300 bg-white/70 text-center sm:h-96 sm:w-96 lg:h-[40%] lg:w-full overflow-hidden">
-            <img
-              src={`${basePath}/components/hero.webp`}
-              alt="Hero illustration"
-              className="h-full w-full object-contain"
-            />
-          </div>
+          <img
+            src={`${basePath}/components/hero.webp`}
+            alt="Hero illustration"
+            className="relative h-auto w-full max-w-md object-contain sm:max-w-xl lg:-mr-6 lg:w-[calc(100%+1.5rem)] lg:max-w-none"
+          />
         </div>
       </div>
     </section>
