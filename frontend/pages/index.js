@@ -84,7 +84,7 @@ function About() {
 
           {/* Fast & Reliable Answers */}
           <div data-reveal style={{ '--reveal-delay': '180ms' }} className="relative flex flex-col rounded-2xl bg-[#FEEFDB] p-7 transition-transform duration-300 ease-out will-change-transform hover:z-20 hover:scale-[1.02] lg:col-span-3 lg:row-span-2">
-            <h3 className="relative z-20 text-3xl pt-3.5 font-bold text-ink-900">Fast &amp; Reliable Answers</h3>
+            <h3 className="relative z-20 text-2xl pt-3.5 font-bold text-ink-900">Fast &amp; Reliable Answers</h3>
             <p className="relative z-20 mt-2 text-sm leading-relaxed text-ink-600">
               Deliver instant, reliable answers whenever your customers need help.
             </p>
@@ -101,7 +101,7 @@ function About() {
 
           {/* FAQ */}
           <div data-reveal style={{ '--reveal-delay': '270ms' }} className="relative flex flex-col rounded-2xl bg-brand-100 p-5 transition-transform duration-300 ease-out will-change-transform hover:z-20 hover:scale-[1.02] lg:col-span-4">
-            <h3 className="text-3xl pt-2 font-bold text-ink-900">Intelligent &amp;  <br />  Helpful Responses</h3>
+            <h3 className="text-2xl pt-2 font-bold text-ink-900">Intelligent &amp;  <br />  Helpful Responses</h3>
             <div className="mt-auto flex justify-end pt-3">
               <img
                 src={`${basePath}/components/faq.png`}
