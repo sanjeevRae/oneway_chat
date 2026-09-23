@@ -60,11 +60,11 @@ function About() {
               Manage Everything
               <ArrowUpRightIcon />
             </h3>
-            <div className="absolute bottom-0 right-0 h-[208px] w-full">
+            <div className="absolute -bottom-[18%] -right-[12%] top-[28%] w-[105%]">
               <img
                 src={`${basePath}/components/dashboard.png`}
                 alt="Dashboard screenshot"
-                className="h-full w-full object-contain object-bottom"
+                className="h-full w-full object-contain object-top"
               />
             </div>
           </div>
@@ -91,7 +91,7 @@ function About() {
                 alt="Rocket illustration"
                 width="281"
                 height="465"
-                className="absolute bottom-0 right-0 z-10 h-[62%] w-auto max-w-none translate-x-[11%] object-contain"
+                className="absolute bottom-0 right-0 z-10 h-[82%] w-auto max-w-none translate-x-[11%] object-contain"
               />
             </div>
           </div>
@@ -103,7 +103,7 @@ function About() {
               <img
                 src={`${basePath}/components/faq.png`}
                 alt="FAQ illustration"
-                className="h-12 w-auto object-contain"
+                className="h-20 w-auto object-contain"
               />
             </div>
           </div>
