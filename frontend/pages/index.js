@@ -60,7 +60,7 @@ function About() {
               Manage Everything
               <ArrowUpRightIcon />
             </h3>
-            <div className="absolute -bottom-[18%] -right-[12%] top-[28%] w-[105%]">
+            <div className="absolute inset-x-0 bottom-0 top-[28%]">
               <img
                 src={`${basePath}/components/dashboard.png`}
                 alt="Dashboard screenshot"
