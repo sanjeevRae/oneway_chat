@@ -87,9 +87,10 @@ function About() {
           </div>
 
           {/* Fast & Reliable Answers — rocket straddling the card's right edge:
-              h-[110%] overflows slightly above the wrapper (bottom-anchored) for
-              extra size; -translate-x-[60%] places 60% of the image inside the
-              card and 40% outside. The heading sits above it via z-20. */}
+              h-[140%] makes it much larger than the card interior (bottom-
+              anchored, so it grows upward past the heading zone); 
+              -translate-x-[60%] places 60% of the image inside the card and
+              40% outside. The heading sits above it via z-20. */}
           <div className="relative flex flex-col rounded-2xl bg-[#FEEFDB] p-7 lg:col-span-3 lg:row-span-2">
             <h3 className="relative z-20 text-xl font-bold text-ink-900">Fast &amp; Reliable Answers</h3>
             <div className="relative -mr-7 mt-5 flex-1">
@@ -98,7 +99,7 @@ function About() {
                 alt="Rocket illustration"
                 width="240"
                 height="240"
-                className="absolute bottom-0 left-full z-10 h-[110%] w-auto max-w-none -translate-x-[60%] object-contain"
+                className="absolute bottom-0 left-full z-10 h-[140%] w-auto max-w-none -translate-x-[60%] object-contain"
               />
             </div>
           </div>
