@@ -86,21 +86,20 @@ function About() {
             </div>
           </div>
 
-          {/* Fast & Reliable Answers — rocket straddling the card's right edge:
-              h-[170%] makes it much larger than the card interior; the wrapper
-              spans to the card's true bottom-right corner (-mr-7 / -mb-7 cancel
-              the padding) so the rocket sits flush on the card's bottom edge.
-              -translate-x-[60%] places 60% of the image inside the card and 40%
-              outside. The heading sits above it via z-20. */}
+          {/* Fast & Reliable Answers — rocket matched to ref.png: trimmed image
+              (no transparent padding) anchored to the card's true bottom-right
+              corner (-mb-7/-mr-7 cancel the padding). Visible size = 65% of the
+              card width, flush with the bottom, ~7% overhanging the right edge.
+              Heading stays above via z-20. */}
           <div className="relative flex flex-col rounded-2xl bg-[#FEEFDB] p-7 lg:col-span-3 lg:row-span-2">
             <h3 className="relative z-20 text-xl font-bold text-ink-900">Fast &amp; Reliable Answers</h3>
             <div className="relative -mb-7 -mr-7 mt-5 flex-1">
               <img
-                src={`${basePath}/components/rocket.png`}
+                src={`${basePath}/components/rocket-trimmed.png`}
                 alt="Rocket illustration"
-                width="240"
-                height="240"
-                className="absolute bottom-0 left-full z-10 h-[170%] w-auto max-w-none -translate-x-[60%] object-contain"
+                width="281"
+                height="465"
+                className="absolute bottom-0 right-0 z-10 h-[77%] w-auto max-w-none translate-x-[11%] object-contain"
               />
             </div>
           </div>
