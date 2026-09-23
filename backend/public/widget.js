@@ -83,6 +83,31 @@
       overflow: hidden;
     }
 
+    /* Red unread badge — shown when a message arrives
+       from the page (hero search) while chat is closed. */
+
+    #onewaybot-badge {
+      position: absolute;
+
+      top: 2px;
+      right: 2px;
+
+      width: 14px;
+      height: 14px;
+
+      border-radius: 50%;
+
+      background: #ef4444;
+
+      border: 2px solid #ffffff;
+
+      display: none;
+    }
+
+    #onewaybot-button.has-unread #onewaybot-badge {
+      display: block;
+    }
+
     #onewaybot-button img {
       width: 100%;
       height: 100%;
@@ -449,6 +474,13 @@
     'aria-label',
     'Open chat'
   );
+
+  const badge =
+    document.createElement('span');
+
+  badge.id = 'onewaybot-badge';
+
+  button.appendChild(badge);
 
   const logo = document.createElement('img');
 
@@ -937,6 +969,10 @@
 
     chat.style.display = 'flex';
 
+    unread = 0;
+
+    button.classList.remove('has-unread');
+
     if (
       !messages.dataset.welcome
     ) {
@@ -979,6 +1015,18 @@
     */
 
     input.value = '';
+
+    sendUserMessage(message);
+  }
+
+  /*
+    Shared sender.
+
+    Used by the input box and by messages handed
+    over from the page itself (the hero "ask" bar).
+  */
+
+  async function sendUserMessage(message) {
 
     send.disabled = true;
 
@@ -1076,6 +1124,149 @@
       input.focus();
     }
   }
+
+  /* =========================
+     PAGE -> WIDGET BRIDGE
+
+     The landing page can hand questions over to
+     the widget (hero search bar). Because the
+     widget loads lazily, the page queues texts
+     on window.__onewayBotPending and dispatches
+     an 'onewaybot:flush' event; this drains the
+     queue at boot and on every flush afterwards.
+
+     While the chat window is closed, each handed-
+     over message shows on the bubble as a red
+     unread dot and plays a short ding.
+  ========================= */
+
+  let unread = 0;
+
+  function markUnread() {
+
+    unread += 1;
+
+    button.classList.add('has-unread');
+
+    playDing();
+  }
+
+  function playDing() {
+
+    try {
+
+      const AudioCtx =
+        window.AudioContext ||
+        window.webkitAudioContext;
+
+      if (!AudioCtx) {
+        return;
+      }
+
+      const ctx = new AudioCtx();
+
+      if (ctx.state === 'suspended') {
+        ctx.resume();
+      }
+
+      const osc =
+        ctx.createOscillator();
+
+      const gain =
+        ctx.createGain();
+
+      osc.type = 'sine';
+
+      osc.frequency.setValueAtTime(
+        880,
+        ctx.currentTime
+      );
+
+      osc.frequency.exponentialRampToValueAtTime(
+        1320,
+        ctx.currentTime + 0.12
+      );
+
+      gain.gain.setValueAtTime(
+        0.0001,
+        ctx.currentTime
+      );
+
+      gain.gain.exponentialRampToValueAtTime(
+        0.18,
+        ctx.currentTime + 0.02
+      );
+
+      gain.gain.exponentialRampToValueAtTime(
+        0.0001,
+        ctx.currentTime + 0.45
+      );
+
+      osc.connect(gain);
+
+      gain.connect(ctx.destination);
+
+      osc.start();
+
+      osc.stop(ctx.currentTime + 0.5);
+
+      osc.onended = function () {
+        ctx.close();
+      };
+
+    } catch {
+      // Sound is best-effort only.
+    }
+  }
+
+  async function flushPending() {
+
+    const queue =
+      window.__onewayBotPending;
+
+    if (!queue || !queue.length) {
+      return;
+    }
+
+    window.__onewayBotPending = [];
+
+    const wasOpen =
+      chat.style.display === 'flex';
+
+    for (const text of queue) {
+
+      /*
+        Make sure the conversation has its
+        welcome message before the handed-
+        over question appears.
+      */
+
+      if (!messages.dataset.welcome) {
+
+        messages.dataset.welcome = '1';
+
+        addMessage(
+          welcomeMessage,
+          'bot'
+        );
+      }
+
+      if (!wasOpen) {
+        markUnread();
+      }
+
+      await sendUserMessage(text);
+    }
+  }
+
+  window.addEventListener(
+    'onewaybot:flush',
+    flushPending
+  );
+
+  // Drain anything the page queued before this script loaded.
+
+  flushPending();
 
   /* =========================
      EVENTS
