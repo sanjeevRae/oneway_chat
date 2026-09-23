@@ -12,7 +12,13 @@
 */
 html.js-reveal [data-reveal] {
   opacity: 0;
-  transform: translateY(32px);
+
+  /*
+    Uses the individual `translate` property (not `transform`) on purpose:
+    these cards also scale on hover, and an animation with fill-mode: both
+    would otherwise keep overriding a hover transform.
+  */
+  translate: 0 32px;
 }
 
 html.js-reveal [data-reveal].is-revealed {
@@ -23,11 +29,11 @@ html.js-reveal [data-reveal].is-revealed {
 @keyframes reveal-up {
   from {
     opacity: 0;
-    transform: translateY(32px);
+    translate: 0 32px;
   }
   to {
     opacity: 1;
-    transform: none;
+    translate: none;
   }
 }
 
@@ -39,11 +45,11 @@ html.js-reveal [data-reveal].is-revealed {
 @keyframes hero-fade-in {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    translate: 0 12px;
   }
   to {
     opacity: 1;
-    transform: none;
+    translate: none;
   }
 }
 
@@ -52,6 +58,7 @@ html.js-reveal [data-reveal].is-revealed {
   html.js-reveal [data-reveal],
   .hero-fade {
     opacity: 1;
+    translate: none;
     transform: none;
     animation: none;
   }

@@ -55,7 +55,7 @@ function About() {
         {/* Bento grid */}
         <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-12">
           {/* Manage Everything */}
-          <div data-reveal className="relative flex flex-col rounded-2xl bg-gray-100 p-7 sm:col-span-2 sm:p-8 lg:col-span-5 lg:row-span-2">
+          <div data-reveal className="relative flex flex-col rounded-2xl bg-gray-100 p-7 transition-transform duration-300 ease-out will-change-transform hover:z-20 hover:scale-[1.02] sm:col-span-2 sm:p-8 lg:col-span-5 lg:row-span-2">
             <h3 className="flex items-center gap-1.5 text-2xl font-bold text-brand-600">
               Manage Everything
               <ArrowUpRightIcon />
@@ -70,7 +70,7 @@ function About() {
           </div>
 
           {/* Keep Track & History — chat bubbles */}
-          <div data-reveal style={{ '--reveal-delay': '90ms' }} className="rounded-2xl bg-[#D4DFFE] p-7 lg:col-span-4">
+          <div data-reveal style={{ '--reveal-delay': '90ms' }} className="relative rounded-2xl bg-[#D4DFFE] p-7 transition-transform duration-300 ease-out will-change-transform hover:z-20 hover:scale-[1.02] lg:col-span-4">
             <h3 className="text-xl font-bold text-ink-900">Helpful Responses</h3>
             <div className="mt-5 space-y-3">
               <div className="rounded-xl bg-white p-3.5 text-[13px] leading-snug text-ink-700 shadow-sm">
@@ -83,7 +83,7 @@ function About() {
           </div>
 
           {/* Fast & Reliable Answers */}
-          <div data-reveal style={{ '--reveal-delay': '180ms' }} className="relative flex flex-col rounded-2xl bg-[#FEEFDB] p-7 lg:col-span-3 lg:row-span-2">
+          <div data-reveal style={{ '--reveal-delay': '180ms' }} className="relative flex flex-col rounded-2xl bg-[#FEEFDB] p-7 transition-transform duration-300 ease-out will-change-transform hover:z-20 hover:scale-[1.02] lg:col-span-3 lg:row-span-2">
             <h3 className="relative z-20 text-3xl pt-3.5 font-bold text-ink-900">Fast &amp; Reliable Answers</h3>
             <p className="relative z-20 mt-2 text-sm leading-relaxed text-ink-600">
               Deliver instant, reliable answers whenever your customers need help.
@@ -100,7 +100,7 @@ function About() {
           </div>
 
           {/* FAQ */}
-          <div data-reveal style={{ '--reveal-delay': '270ms' }} className="relative flex flex-col rounded-2xl bg-brand-100 p-5 lg:col-span-4">
+          <div data-reveal style={{ '--reveal-delay': '270ms' }} className="relative flex flex-col rounded-2xl bg-brand-100 p-5 transition-transform duration-300 ease-out will-change-transform hover:z-20 hover:scale-[1.02] lg:col-span-4">
             <h3 className="text-3xl pt-2 font-bold text-ink-900">Intelligent &amp;  <br />  Helpful Responses</h3>
             <div className="mt-auto flex justify-end pt-3">
               <img
@@ -437,7 +437,7 @@ function Features() {
               key={feature.title}
               data-reveal
               style={{ '--reveal-delay': `${i * 80}ms` }}
-              className="rounded-2xl border border-gray-100 bg-white p-7 shadow-sm sm:p-9"
+              className="relative rounded-2xl border border-gray-100 bg-white p-7 shadow-sm transition-transform duration-300 ease-out will-change-transform hover:z-10 hover:scale-[1.01] sm:p-9"
             >
               <h3 className="text-xl font-bold text-ink-900 sm:text-2xl">{feature.title}</h3>
               <p className="mt-3 max-w-3xl text-[13px] leading-relaxed text-ink-500 sm:text-sm">
@@ -509,7 +509,7 @@ function Cta() {
                 key={card.title}
                 data-reveal
                 style={{ '--reveal-delay': `${i * 90}ms` }}
-                className={`rounded-2xl px-7 py-10 text-center ${card.bg}`}
+                className={`relative rounded-2xl px-7 py-10 text-center transition-transform duration-300 ease-out will-change-transform hover:z-10 hover:scale-[1.03] ${card.bg}`}
               >
                 <div className="mx-auto mb-4 w-14">
                   <img
