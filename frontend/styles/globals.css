@@ -3,6 +3,60 @@
 @tailwind utilities;
 
 /* ---------- Base ---------- */
+/* ---------- Scroll reveal ---------- */
+
+/*
+  Sections fly up as they scroll into view. The html.js-reveal gate is added
+  by an inline script in _document.js, so if JS never runs the content simply
+  stays visible instead of being stuck at opacity 0.
+*/
+html.js-reveal [data-reveal] {
+  opacity: 0;
+  transform: translateY(32px);
+}
+
+html.js-reveal [data-reveal].is-revealed {
+  animation: reveal-up 0.7s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  animation-delay: var(--reveal-delay, 0ms);
+}
+
+@keyframes reveal-up {
+  from {
+    opacity: 0;
+    transform: translateY(32px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Hero: gentle fade in on first paint. */
+.hero-fade {
+  animation: hero-fade-in 0.9s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+@keyframes hero-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Respect users who ask for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  html.js-reveal [data-reveal],
+  .hero-fade {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+}
+
 html {
   scroll-behavior: smooth;
 }

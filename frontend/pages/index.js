@@ -35,9 +35,9 @@ function About() {
     <section id="about" className="overflow-x-clip bg-white py-20 sm:py-24">
       <div className="mx-auto max-w-6xl px-6">
         {/* Heading + intro copy */}
-        <h2 className="text-3xl font-bold tracking-tight text-ink-900 sm:text-4xl">About the tool</h2>
+        <h2 data-reveal className="text-3xl font-bold tracking-tight text-ink-900 sm:text-4xl">About the tool</h2>
 
-        <div className="mt-6 max-w-4xl space-y-4 text-[15px] leading-relaxed text-ink-500">
+        <div data-reveal style={{ '--reveal-delay': '80ms' }} className="mt-6 max-w-4xl space-y-4 text-[15px] leading-relaxed text-ink-500">
           <p>
            OneWayChat gives your business an AI chat assistant that answers customers
            instantly using your own knowledge including your website, documents, FAQs,
@@ -55,7 +55,7 @@ function About() {
         {/* Bento grid */}
         <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-12">
           {/* Manage Everything */}
-          <div className="relative flex flex-col rounded-2xl bg-gray-100 p-7 sm:col-span-2 sm:p-8 lg:col-span-5 lg:row-span-2">
+          <div data-reveal className="relative flex flex-col rounded-2xl bg-gray-100 p-7 sm:col-span-2 sm:p-8 lg:col-span-5 lg:row-span-2">
             <h3 className="flex items-center gap-1.5 text-2xl font-bold text-brand-600">
               Manage Everything
               <ArrowUpRightIcon />
@@ -70,7 +70,7 @@ function About() {
           </div>
 
           {/* Keep Track & History — chat bubbles */}
-          <div className="rounded-2xl bg-[#D4DFFE] p-7 lg:col-span-4">
+          <div data-reveal style={{ '--reveal-delay': '90ms' }} className="rounded-2xl bg-[#D4DFFE] p-7 lg:col-span-4">
             <h3 className="text-xl font-bold text-ink-900">Helpful Responses</h3>
             <div className="mt-5 space-y-3">
               <div className="rounded-xl bg-white p-3.5 text-[13px] leading-snug text-ink-700 shadow-sm">
@@ -83,7 +83,7 @@ function About() {
           </div>
 
           {/* Fast & Reliable Answers */}
-          <div className="relative flex flex-col rounded-2xl bg-[#FEEFDB] p-7 lg:col-span-3 lg:row-span-2">
+          <div data-reveal style={{ '--reveal-delay': '180ms' }} className="relative flex flex-col rounded-2xl bg-[#FEEFDB] p-7 lg:col-span-3 lg:row-span-2">
             <h3 className="relative z-20 text-3xl pt-3.5 font-bold text-ink-900">Fast &amp; Reliable Answers</h3>
             <p className="relative z-20 mt-2 text-sm leading-relaxed text-ink-600">
               Deliver instant, reliable answers whenever your customers need help.
@@ -100,7 +100,7 @@ function About() {
           </div>
 
           {/* FAQ */}
-          <div className="relative flex flex-col rounded-2xl bg-brand-100 p-5 lg:col-span-4">
+          <div data-reveal style={{ '--reveal-delay': '270ms' }} className="relative flex flex-col rounded-2xl bg-brand-100 p-5 lg:col-span-4">
             <h3 className="text-3xl pt-2 font-bold text-ink-900">Intelligent &amp;  <br />  Helpful Responses</h3>
             <div className="mt-auto flex justify-end pt-3">
               <img
@@ -292,7 +292,7 @@ function Hero() {
   }
 
   return (
-    <section id="hero" className="relative overflow-hidden bg-white">
+    <section id="hero" className="hero-fade relative overflow-hidden bg-white">
       <div className="relative mx-auto grid max-w-6xl items-center gap-14 px-6 pb-20 pt-14 sm:pt-20 lg:grid-cols-[58%_42%] lg:gap-0">
         {/* Left — headline, subtext, ask bar */}
         <div>
@@ -422,19 +422,21 @@ function Features() {
     <section id="features" className="bg-gray-50 py-20 sm:py-24">
       <div className="mx-auto max-w-5xl px-6">
         {/* Heading */}
-        <h2 className="text-center text-3xl font-bold tracking-tight text-ink-900 sm:text-4xl">
+        <h2 data-reveal className="text-center text-3xl font-bold tracking-tight text-ink-900 sm:text-4xl">
           Our Services Through AI
         </h2>
-        <p className="mx-auto mt-4 max-w-xl text-center text-sm leading-relaxed text-ink-500">
+        <p data-reveal style={{ '--reveal-delay': '80ms' }} className="mx-auto mt-4 max-w-xl text-center text-sm leading-relaxed text-ink-500">
           OneWayChat provides several bot services for your business, trained on your own
           knowledge base. Try the different bots to see what they can do for your queries.
         </p>
 
         {/* Cards */}
         <div className="mt-12 space-y-6">
-          {FEATURES.map((feature) => (
+          {FEATURES.map((feature, i) => (
             <div
               key={feature.title}
+              data-reveal
+              style={{ '--reveal-delay': `${i * 80}ms` }}
               className="rounded-2xl border border-gray-100 bg-white p-7 shadow-sm sm:p-9"
             >
               <h3 className="text-xl font-bold text-ink-900 sm:text-2xl">{feature.title}</h3>
@@ -494,16 +496,21 @@ function Cta() {
       {/* Value cards */}
       <section className="bg-white py-20 sm:py-24">
         <div className="mx-auto max-w-6xl px-6">
-          <h2 className="text-center text-3xl font-bold tracking-tight text-ink-900 sm:text-4xl">
+          <h2 data-reveal className="text-center text-3xl font-bold tracking-tight text-ink-900 sm:text-4xl">
             Your AI Assistant, Built for Business
           </h2>
-          <p className="mx-auto mt-4 max-w-xl text-center text-sm leading-relaxed text-ink-500">
+          <p data-reveal style={{ '--reveal-delay': '80ms' }} className="mx-auto mt-4 max-w-xl text-center text-sm leading-relaxed text-ink-500">
             Turn conversations into useful actions. Your AI assistant answers customers, captures leads, handles common questions, and helps your team stay available around the clock.
           </p>
 
           <div className="mt-12 grid gap-6 sm:grid-cols-3">
-            {CTA_CARDS.map((card) => (
-              <div key={card.title} className={`rounded-2xl px-7 py-10 text-center ${card.bg}`}>
+            {CTA_CARDS.map((card, i) => (
+              <div
+                key={card.title}
+                data-reveal
+                style={{ '--reveal-delay': `${i * 90}ms` }}
+                className={`rounded-2xl px-7 py-10 text-center ${card.bg}`}
+              >
                 <div className="mx-auto mb-4 w-14">
                   <img
                     src={`${basePath}${card.src}`}
@@ -529,7 +536,7 @@ function Cta() {
           aria-hidden="true"
           className="absolute -right-24 -top-24 h-[360px] w-[360px] rounded-full bg-brand-500/40"
         />
-        <div className="relative mx-auto max-w-3xl px-6 py-20 text-center sm:py-24">
+        <div data-reveal className="relative mx-auto max-w-3xl px-6 py-20 text-center sm:py-24">
           <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
             Ready to Try OneWayChat?
           </h2>
@@ -575,7 +582,7 @@ function Footer() {
     <footer id="footer" className="bg-gray-900">
       <div className="mx-auto grid max-w-6xl gap-12 px-6 py-16 sm:grid-cols-2 lg:grid-cols-5">
         {/* Brand */}
-        <div className="lg:col-span-2">
+        <div data-reveal className="lg:col-span-2">
           <span className="text-2xl font-bold tracking-tight text-white">OneWayChat</span>
           <p className="mt-5 text-sm leading-relaxed text-gray-400">
             Conversational AI Assistant
@@ -585,7 +592,7 @@ function Footer() {
         </div>
 
         {/* About Company */}
-        <div>
+        <div data-reveal style={{ '--reveal-delay': '90ms' }}>
           <h3 className="text-sm font-semibold text-white">About Company</h3>
           <ul className="mt-4 space-y-3">
             <li><Link href="/#about" className={linkCls}>About us</Link></li>
@@ -594,7 +601,7 @@ function Footer() {
         </div>
 
         {/* Important Links */}
-        <div>
+        <div data-reveal style={{ '--reveal-delay': '180ms' }}>
           <h3 className="text-sm font-semibold text-white">Important Links</h3>
           <ul className="mt-4 space-y-3">
             <li><Link href="https://onewaynepal.com/terms-and-conditions" className={linkCls}>Terms &amp; Conditions</Link></li>
@@ -604,7 +611,7 @@ function Footer() {
         </div>
 
         {/* Contact */}
-        <div>
+        <div data-reveal style={{ '--reveal-delay': '270ms' }}>
           <h3 className="text-sm font-semibold text-white">Give us a Call</h3>
           <ul className="mt-4 space-y-3 text-sm text-gray-400">
             <li className="flex items-center gap-2.5">
@@ -633,7 +640,54 @@ function Footer() {
   );
 }
 
+/*
+  Scroll reveal driver.
+
+  Finds every [data-reveal] block on the page and marks it revealed the first
+  time it enters the viewport. The CSS does the animating; this only toggles a
+  class, so nothing re-renders and scrolling stays smooth. Elements already on
+  screen at load reveal immediately, and prefers-reduced-motion skips it.
+*/
+function useScrollReveal() {
+  useEffect(() => {
+    const nodes = Array.from(document.querySelectorAll('[data-reveal]'));
+
+    if (!nodes.length) return;
+
+    const reducedMotion =
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (reducedMotion || typeof IntersectionObserver === 'undefined') {
+      nodes.forEach((node) => node.classList.add('is-revealed'));
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+
+          entry.target.classList.add('is-revealed');
+          observer.unobserve(entry.target);
+        });
+      },
+      {
+        // Trigger as soon as the block's top passes 80px above the fold.
+        threshold: 0,
+        rootMargin: '0px 0px -80px 0px',
+      }
+    );
+
+    nodes.forEach((node) => observer.observe(node));
+
+    return () => observer.disconnect();
+  }, []);
+}
+
 export default function Home() {
+  useScrollReveal();
+
   return (
     <main>
       <Hero />

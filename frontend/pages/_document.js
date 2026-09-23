@@ -4,6 +4,13 @@ export default function Document() {
   return (
     <Html lang="en">
       <Head>
+        {/* Gate for the scroll-reveal styles: without JS the class is never
+            added, so the page content stays visible instead of hidden. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: "document.documentElement.classList.add('js-reveal')",
+          }}
+        />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
