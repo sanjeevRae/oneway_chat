@@ -9,3 +9,5 @@ coverage/
 *.log
 *.zip
 .DS_Store
+# VS Code Local History extension artifacts
+.history/

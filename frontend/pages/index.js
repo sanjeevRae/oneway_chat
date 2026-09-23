@@ -1,4 +1,9 @@
+// Public landing page — shown before login.
+// All sections built: Hero, About, Features, CTA, Footer.
+
 import Link from 'next/link';
+import Script from 'next/script';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/router';
 
 function ArrowUpRightIcon() {
@@ -10,6 +15,8 @@ function ArrowUpRightIcon() {
   );
 }
 
+// Bootstrap Icons "bi bi-chat", inlined as a component so there is no icon
+// library import and no runtime registration step that can silently fail.
 function ChatIcon({ className = '' }) {
   return (
     <svg
@@ -33,7 +40,7 @@ function About() {
     <section id="about" className="overflow-x-clip bg-white py-20 sm:py-24">
       <div className="mx-auto max-w-6xl px-6">
         {/* Heading + intro copy */}
-        <h2 className="text-3xl fontrocket-bold tracking-tight text-ink-900 sm:text-4xl">About the tool</h2>
+        <h2 className="text-3xl font-bold tracking-tight text-ink-900 sm:text-4xl">About the tool</h2>
 
         <div className="mt-6 max-w-4xl space-y-4 text-[15px] leading-relaxed text-ink-500">
           <p>
@@ -80,23 +87,27 @@ function About() {
             </div>
           </div>
 
-          {/* Fast & Reliable Answers */}
+          {/* Fast & Reliable Answers — rocket matched to ref.png: trimmed image
+              (no transparent padding) anchored to the card's true bottom-right
+              corner (-mb-7/-mr-7 cancel the padding). Visible size = 65% of the
+              card width, flush with the bottom, ~7% overhanging the right edge.
+              Heading stays above via z-20. */}
           <div className="relative flex flex-col rounded-2xl bg-[#FEEFDB] p-7 lg:col-span-3 lg:row-span-2">
-            <h3 className="text-xl font-bold text-ink-900">Fast &amp; Reliable Answers</h3>
-            <div className="relative -mr-7 mt-5 flex-1">
+            <h3 className="relative z-20 text-2xl font-bold text-ink-900">Fast &amp; Reliable Answers</h3>
+            <div className="relative -mb-7 -mr-7 mt-5 flex-1">
               <img
-                src={`${basePath}/components/rocket.png`}
+                src={`${basePath}/components/rocket-trimmed.png`}
                 alt="Rocket illustration"
-                width="240"
-                height="240"
-                className="absolute bottom-0 left-full z-10 h-[85%] w-auto max-w-none -translate-x-1/2 object-contain"
+                width="281"
+                height="465"
+                className="absolute bottom-0 right-0 z-10 h-[77%] w-auto max-w-none translate-x-[11%] object-contain"
               />
             </div>
           </div>
 
           {/* Informative & Insightful Data — FAQ image flows under the text */}
           <div className="relative flex flex-col rounded-2xl bg-brand-100 p-7 lg:col-span-4">
-            <h3 className="text-xl font-bold text-ink-900">Intelligent &amp;  <br />  Helpful Responses</h3>
+            <h3 className="text-2xl font-bold text-ink-900">Intelligent &amp;  <br />  Helpful Responses</h3>
             <div className="mt-auto flex justify-end pt-4">
               <img
                 src={`${basePath}/components/faq.png`}
@@ -106,7 +117,7 @@ function About() {
             </div>
           </div>
         </div>
-      </div>cd
+      </div>
     </section>
   );
 }
@@ -120,8 +131,95 @@ function SearchIcon() {
   );
 }
 
+const HERO_SUGGESTIONS = [
+  { text: 'What services do you provide?', keywords: ['service', 'services', 'provide', 'offer'] },
+  { text: 'How does this chatbot work?', keywords: ['how', 'work', 'works', 'chatbot', 'bot', 'ai'] },
+  { text: 'Can I book an appointment?', keywords: ['book', 'booking', 'appointment', 'schedule', 'reserve'] },
+  { text: 'What are your opening hours?', keywords: ['hour', 'hours', 'open', 'opening', 'timing', 'when'] },
+  { text: 'How much do your services cost?', keywords: ['cost', 'price', 'much', 'charge', 'fee'] },
+  { text: 'Where are you located?', keywords: ['where', 'located', 'location', 'address'] },
+  { text: 'How can I contact you?', keywords: ['contact', 'email', 'phone', 'call', 'reach'] },
+];
+
+function filterHeroSuggestions(value) {
+  const query = value.toLowerCase().trim();
+  if (!query) return HERO_SUGGESTIONS;
+
+  const words = query.split(/\s+/);
+
+  return HERO_SUGGESTIONS.filter(({ text, keywords }) =>
+    text.toLowerCase().includes(query) ||
+    keywords.some(
+      (k) =>
+        query.includes(k) ||
+        words.some((w) => w && (k.startsWith(w) || w.startsWith(k)))
+    )
+  );
+}
+
 function Hero() {
   const { basePath } = useRouter();
+
+  const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(-1);
+  const inputRef = useRef(null);
+
+  const suggestions = filterHeroSuggestions(query);
+
+  /*
+    Send the question into the widget conversation.
+
+    The widget script loads with lazyOnload, so it may not be
+    on the page yet — the message is queued on window and a
+    flush event is fired. The widget drains the queue when it
+    boots and listens for further flushes afterwards.
+  */
+  function handleAsk(preset) {
+    const text = String(preset ?? query).trim();
+    if (!text) return;
+
+    window.__onewayBotPending = window.__onewayBotPending || [];
+    window.__onewayBotPending.push(text);
+    window.dispatchEvent(new CustomEvent('onewaybot:flush'));
+
+    setQuery('');
+    setActive(-1);
+    setOpen(false);
+    inputRef.current?.blur();
+  }
+
+  function handleAskKeyDown(event) {
+    const count = suggestions.length;
+
+    if (
+      (event.key === 'ArrowDown' ||
+        event.key === 'ArrowUp' ||
+        event.key === 'Tab') &&
+      count > 0
+    ) {
+      event.preventDefault();
+      setOpen(true);
+
+      if (event.key === 'ArrowDown' || (event.key === 'Tab' && !event.shiftKey)) {
+        setActive((i) => (i + 1) % count);
+      } else {
+        setActive((i) => (i - 1 + count) % count);
+      }
+      return;
+    }
+
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      handleAsk(active >= 0 && active < count ? suggestions[active] : undefined);
+      return;
+    }
+
+    if (event.key === 'Escape') {
+      setOpen(false);
+      setActive(-1);
+    }
+  }
 
   return (
     <section id="hero" className="relative overflow-hidden bg-white">
@@ -129,29 +227,73 @@ function Hero() {
         {/* Left — headline, subtext, ask bar */}
         <div>
           <h1 className="text-4xl font-bold leading-[1.15] tracking-tight text-ink-900 sm:text-[44px] sm:leading-[1.12]">
-            Make AI Your Business’s 
-            <br />Always-On Assistant
+            Make AI Your Business’s
+            <br />
+            Always-On Assistant
           </h1>
 
           <p className="mt-6 max-w-lg text-[15px] leading-relaxed text-ink-500">
            OneWayChat helps businesses turn their knowledge into intelligent AI conversations that improve customer support, automate repetitive tasks, and drive more engagement.
           </p>
 
-          <form
-            className="mt-9 flex max-w-md items-center gap-3 rounded-full border border-gray-200 bg-white py-3.5 pl-5 pr-3 shadow-sm transition-colors focus-within:border-brand-500"
-            onSubmit={(e) => e.preventDefault()}
-          >
-            <SearchIcon />
-            <input
-              type="text"
-              placeholder="Ask something…"
-              aria-label="Ask something"
-              className="w-full bg-transparent text-sm text-ink-700 outline-none placeholder:text-ink-400"
-            />
-          </form>
+          <div className="relative mt-9">
+            <form
+              className="flex max-w-md items-center gap-3 rounded-full border border-gray-200 bg-white py-3.5 pl-5 pr-3 shadow-sm transition-colors focus-within:border-brand-500"
+              onSubmit={(e) => e.preventDefault()}
+            >
+              <SearchIcon />
+              <input
+                ref={inputRef}
+                type="text"
+                value={query}
+                placeholder="Ask something…"
+                aria-label="Ask something"
+                className="w-full bg-transparent text-sm text-ink-700 outline-none placeholder:text-ink-400"
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setOpen(true);
+                  setActive(-1);
+                }}
+                onFocus={() => setOpen(true)}
+                onKeyDown={handleAskKeyDown}
+              />
+            </form>
+
+            {/* Suggestion panel */}
+            {open && suggestions.length > 0 && (
+              <ul
+                className="absolute left-0 top-full z-30 mt-2 max-w-md overflow-hidden rounded-2xl border border-gray-100 bg-white py-1.5 shadow-lg"
+                role="listbox"
+              >
+                {suggestions.map((s, i) => (
+                  <li key={s.text}>
+                    <button
+                      type="button"
+                      className={`flex w-full items-center gap-2.5 px-5 py-2.5 text-left text-[13px] transition-colors ${
+                        i === active
+                          ? 'bg-brand-50 text-ink-900'
+                          : 'text-ink-600 hover:bg-gray-50'
+                      }`}
+                      onMouseEnter={() => setActive(i)}
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => handleAsk(s.text)}
+                    >
+                      <SearchIcon />
+                      <span className="flex-1">{s.text}</span>
+                      {i === active && (
+                        <span className="shrink-0 rounded bg-brand-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                          ↵ Enter
+                        </span>
+                      )}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
 
-        {/* hero*/}
+        {/* Right — hero illustration, bleeds to the screen edge on desktop */}
         <div className="relative flex items-center justify-center py-6 lg:justify-end lg:py-0">
           <div
             aria-hidden="true"
@@ -429,6 +571,17 @@ export default function Home() {
       <Features />
       <Cta />
       <Footer />
+
+      {/* Live demo of the product itself: the same embeddable widget customers
+          paste into their own sites. The script draws the bottom-right chat
+          bubble, loads the welcome message from /api/chat/config/:orgId and
+          talks to POST /api/chat. Uses lazyOnload so it never blocks LCP. */}
+      {process.env.NEXT_PUBLIC_DEMO_ORG_ID ? (
+        <Script
+          src={`${String(process.env.NEXT_PUBLIC_API_URL || '').replace(/\/+$/, '')}/widget.js?org=${process.env.NEXT_PUBLIC_DEMO_ORG_ID}`}
+          strategy="lazyOnload"
+        />
+      ) : null}
     </main>
   );
 }
