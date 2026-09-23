@@ -320,7 +320,7 @@ function Hero() {
             {/* Suggestion panel */}
             {open && suggestions.length > 0 && (
               <ul
-                className="absolute left-0 top-full z-30 mt-2 max-w-md overflow-hidden rounded-2xl border border-gray-100 bg-white py-1.5 shadow-lg"
+                className="absolute left-0 top-full z-30 mt-2 max-h-64 max-w-md overflow-y-auto rounded-2xl border border-gray-100 bg-white py-1.5 shadow-lg"
                 role="listbox"
               >
                 {suggestions.map((s, i) => (
