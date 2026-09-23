@@ -1,6 +1,3 @@
-// Public landing page — shown before login.
-// All sections built: Hero, About, Features, CTA, Footer.
-
 import Link from 'next/link';
 import Script from 'next/script';
 import { useState, useRef, useEffect } from 'react';
@@ -15,8 +12,6 @@ function ArrowUpRightIcon() {
   );
 }
 
-// Bootstrap Icons "bi bi-chat", inlined as a component so there is no icon
-// library import and no runtime registration step that can silently fail.
 function ChatIcon({ className = '' }) {
   return (
     <svg
@@ -87,11 +82,7 @@ function About() {
             </div>
           </div>
 
-          {/* Fast & Reliable Answers — rocket matched to ref.png: trimmed image
-              (no transparent padding) anchored to the card's true bottom-right
-              corner (-mb-7/-mr-7 cancel the padding). Visible size = 65% of the
-              card width, flush with the bottom, ~7% overhanging the right edge.
-              Heading stays above via z-20. */}
+          {/* Fast & Reliable Answers */}
           <div className="relative flex flex-col rounded-2xl bg-[#FEEFDB] p-7 lg:col-span-3 lg:row-span-2">
             <h3 className="relative z-20 text-2xl font-bold text-ink-900">Fast &amp; Reliable Answers</h3>
             <div className="relative -mb-7 -mr-7 mt-5 flex-1">
@@ -105,7 +96,7 @@ function About() {
             </div>
           </div>
 
-          {/* Informative & Insightful Data — FAQ image flows under the text */}
+          {/* FAQ */}
           <div className="relative flex flex-col rounded-2xl bg-brand-100 p-7 lg:col-span-4">
             <h3 className="text-2xl font-bold text-ink-900">Intelligent &amp;  <br />  Helpful Responses</h3>
             <div className="mt-auto flex justify-end pt-4">
@@ -168,6 +159,7 @@ function Hero() {
   const [active, setActive] = useState(-1);
   const [typedPlaceholder, setTypedPlaceholder] = useState('Ask a question…');
   const inputRef = useRef(null);
+  const boxRef = useRef(null);
 
   /*
     Typewriter placeholder: types each question, holds,
@@ -182,7 +174,7 @@ function Hero() {
       return;
     }
 
-    const phrases = HERO_SUGGESTIONS.slice(0, 4).map((s) => s.text);
+    const phrases = ['Type your message here…', ...HERO_SUGGESTIONS.slice(0, 4).map((s) => s.text)];
 
     let phrase = 0;
     let char = 0;
@@ -222,6 +214,23 @@ function Hero() {
 
     return () => clearTimeout(timer);
   }, [query, open]);
+
+  /*
+    Close the suggestion panel when the user clicks
+    anywhere outside the search box area.
+  */
+  useEffect(() => {
+    function onPointerDown(e) {
+      if (boxRef.current && !boxRef.current.contains(e.target)) {
+        setOpen(false);
+        setActive(-1);
+      }
+    }
+
+    document.addEventListener('mousedown', onPointerDown);
+
+    return () => document.removeEventListener('mousedown', onPointerDown);
+  }, []);
 
   const suggestions = filterHeroSuggestions(query);
 
@@ -294,7 +303,7 @@ function Hero() {
            OneWayChat helps businesses turn their knowledge into intelligent AI conversations that improve customer support, automate repetitive tasks, and drive more engagement.
           </p>
 
-          <div className="relative mt-9">
+          <div ref={boxRef} className="relative mt-9">
             <form
               className="flex max-w-md items-center gap-3 rounded-full border border-gray-200 bg-white py-3.5 pl-5 pr-3 shadow-sm transition-colors focus-within:border-brand-500"
               onSubmit={(e) => e.preventDefault()}
