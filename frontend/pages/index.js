@@ -60,7 +60,7 @@ function About() {
               Manage Everything
               <ArrowUpRightIcon />
             </h3>
-            <div className="absolute bottom-0 right-0 h-[260px] w-full">
+            <div className="absolute bottom-0 right-0 h-[208px] w-full">
               <img
                 src={`${basePath}/components/dashboard.png`}
                 alt="Dashboard screenshot"
@@ -91,19 +91,19 @@ function About() {
                 alt="Rocket illustration"
                 width="281"
                 height="465"
-                className="absolute bottom-0 right-0 z-10 h-[77%] w-auto max-w-none translate-x-[11%] object-contain"
+                className="absolute bottom-0 right-0 z-10 h-[62%] w-auto max-w-none translate-x-[11%] object-contain"
               />
             </div>
           </div>
 
           {/* FAQ */}
-          <div className="relative flex flex-col rounded-2xl bg-brand-100 p-7 lg:col-span-4">
+          <div className="relative flex flex-col rounded-2xl bg-brand-100 p-5 lg:col-span-4">
             <h3 className="text-2xl font-bold text-ink-900">Intelligent &amp;  <br />  Helpful Responses</h3>
-            <div className="mt-auto flex justify-end pt-4">
+            <div className="mt-auto flex justify-end pt-3">
               <img
                 src={`${basePath}/components/faq.png`}
                 alt="FAQ illustration"
-                className="h-16 w-auto object-contain"
+                className="h-12 w-auto object-contain"
               />
             </div>
           </div>
