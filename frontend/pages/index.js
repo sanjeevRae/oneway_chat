@@ -92,7 +92,7 @@ function About() {
               card width, flush with the bottom, ~7% overhanging the right edge.
               Heading stays above via z-20. */}
           <div className="relative flex flex-col rounded-2xl bg-[#FEEFDB] p-7 lg:col-span-3 lg:row-span-2">
-            <h3 className="relative z-20 text-xl font-bold text-ink-900">Fast &amp; Reliable Answers</h3>
+            <h3 className="relative z-20 text-2xl font-bold text-ink-900">Fast &amp; Reliable Answers</h3>
             <div className="relative -mb-7 -mr-7 mt-5 flex-1">
               <img
                 src={`${basePath}/components/rocket-trimmed.png`}
@@ -106,7 +106,7 @@ function About() {
 
           {/* Informative & Insightful Data — FAQ image flows under the text */}
           <div className="relative flex flex-col rounded-2xl bg-brand-100 p-7 lg:col-span-4">
-            <h3 className="text-xl font-bold text-ink-900">Intelligent &amp;  <br />  Helpful Responses</h3>
+            <h3 className="text-2xl font-bold text-ink-900">Intelligent &amp;  <br />  Helpful Responses</h3>
             <div className="mt-auto flex justify-end pt-4">
               <img
                 src={`${basePath}/components/faq.png`}
