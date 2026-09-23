@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { api, API_URL } from '../lib/supabaseClient';
+import { api, apiBlob } from '../lib/supabaseClient';
 
 /* Inline SVG icons (Lucide-style strokes) */
 const Icon = ({ children }) => (
@@ -19,6 +19,41 @@ export default function Admin() {
   const [editing, setEditing] = useState(null); // tenant id being edited
   const [quotaInput, setQuotaInput] = useState('');
   const [saving, setSaving] = useState(false);
+  const [exporting, setExporting] = useState(''); // '' | 'tenants' | 'messages'
+
+  /*
+   * CSV export.
+   *
+   * These used to be plain <a href> links — a browser navigation can
+   * never attach an Authorization header, so the admin middleware
+   * always answered 401 {"error":"Missing authorization token"}.
+   * Fetch the CSV with the session token instead, then download the
+   * response Blob client-side.
+   */
+  async function exportCsv(type) {
+    if (exporting) return;
+    setExporting(type);
+    setError('');
+    try {
+      const path =
+        type === 'messages'
+          ? '/api/admin/export?type=messages'
+          : '/api/admin/export';
+      const { blob, filename } = await apiBlob(path);
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError(e.message);
+    }
+    setExporting('');
+  }
 
   async function load() {
     try {
@@ -79,14 +114,31 @@ export default function Admin() {
           <h1 className="text-3xl font-semibold tracking-tight text-ink-900">Admin</h1>
         </div>
         <div className="flex gap-2">
-          <a href={`${API_URL}/api/admin/export`} target="_blank" rel="noreferrer" className="btn-outline !py-2 text-xs">
-            Export tenants CSV
-          </a>
-          <a href={`${API_URL}/api/admin/export?type=messages`} target="_blank" rel="noreferrer" className="btn-outline !py-2 text-xs">
-            Export usage CSV
-          </a>
+          <button
+            type="button"
+            onClick={() => exportCsv('tenants')}
+            disabled={!!exporting}
+            className="btn-outline !py-2 text-xs"
+          >
+            {exporting === 'tenants' ? 'Exporting…' : 'Export tenants CSV'}
+          </button>
+          <button
+            type="button"
+            onClick={() => exportCsv('messages')}
+            disabled={!!exporting}
+            className="btn-outline !py-2 text-xs"
+          >
+            {exporting === 'messages' ? 'Exporting…' : 'Export usage CSV'}
+          </button>
         </div>
       </div>
+
+      {/* Errors raised after the table has loaded (quota save, CSV export) */}
+      {error && tenants && (
+        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+          {error}
+        </div>
+      )}
 
       {/* Summary */}
       <div className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4">

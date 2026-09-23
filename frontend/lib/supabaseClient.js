@@ -199,6 +199,83 @@ export async function api(
 }
 
 /**
+ * Authenticated API helper for binary responses (CSV export).
+ *
+ * Same session/Bearer/401 contract as api(), but returns the raw
+ * body as a Blob plus the server-provided filename instead of
+ * parsing JSON — api() always runs res.json(), which would destroy
+ * a text/csv payload.
+ */
+export async function apiBlob(
+  path,
+  options = {}
+) {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  const headers = {
+    ...(session?.access_token
+      ? {
+          Authorization:
+            `Bearer ${session.access_token}`,
+        }
+      : {}),
+    ...(options.headers || {}),
+  };
+
+  const res = await fetchApi(path, {
+    ...options,
+    headers,
+  });
+
+  if (
+    res.status === 401 &&
+    !path.startsWith('/api/auth')
+  ) {
+    await purgeDeadSession();
+
+    if (
+      typeof window !== 'undefined'
+    ) {
+      window.location.href =
+        '/chat/login';
+    }
+
+    throw new Error(
+      'Your session expired. Please log in again.'
+    );
+  }
+
+  if (!res.ok) {
+    const data = await res
+      .json()
+      .catch(() => ({}));
+    throw new Error(
+      data.error ||
+        `Request failed (${res.status})`
+    );
+  }
+
+  // Server sends: Content-Disposition: attachment; filename="…"
+  const disposition =
+    res.headers.get(
+      'Content-Disposition'
+    ) || '';
+  const match =
+    disposition.match(
+      /filename="([^"]+)"/
+    );
+
+  return {
+    blob: await res.blob(),
+    filename: match
+      ? match[1]
+      : 'export.csv',
+  };
+}
+
+/**
  * Validate stored Supabase session.
  */
 export async function getValidSession() {
