@@ -31,14 +31,39 @@ export default function Train() {
   }
   useEffect(() => { load(); }, []);
 
+  /*
+    Background crawls: the route returns instantly with a 'processing'
+    document row; poll while any document is mid-flight so the list
+    flips to 'ready' (with a success note) or 'failed' on its own.
+  */
+  const processing = docs.some((d) => d.status === 'processing');
+  useEffect(() => {
+    if (!processing) return undefined;
+    const t = setInterval(load, 2500);
+    return () => clearInterval(t);
+  }, [processing]);
+
+  const wasProcessing = useRef(false);
+  useEffect(() => {
+    if (wasProcessing.current && !processing) {
+      const failedCrawl = docs.find((d) => d.status === 'failed' && d.source_type === 'crawl');
+      if (failedCrawl) {
+        setNotice('That crawl could not be read — check the URL and that the site allows bots, then try again.');
+      } else {
+        setNotice('Done — your bot can answer from the new content now.');
+      }
+    }
+    wasProcessing.current = processing;
+  }, [processing, docs]);
+
   async function crawl(e) {
     e.preventDefault();
     setBusy('crawl'); setError(''); setNotice('');
     try {
-      const data = await api('/api/knowledge/crawl', { method: 'POST', body: JSON.stringify({ url: e.target.url.value }) });
-      const pages = data.pages || 1;
-      const chars = data.chars ? ` (~${Math.round(data.chars / 1000)}k characters)` : '';
-      setNotice(`Learned ${pages} page${pages === 1 ? '' : 's'} from that site${chars} — your bot can answer from them now.`);
+      // The backend crawls in the background — this returns instantly with a
+      // 'processing' row and the polling effect below refreshes until ready.
+      await api('/api/knowledge/crawl', { method: 'POST', body: JSON.stringify({ url: e.target.url.value }) });
+      setNotice("Crawling started — your bot is learning from that site now. This list refreshes by itself until it's ready.");
       e.target.reset();
       load();
     } catch (err) { setError(err.message); }

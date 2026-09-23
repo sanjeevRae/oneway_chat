@@ -17,18 +17,23 @@
 const dns = require('dns').promises;
 const { JSDOM } = require('jsdom');
 const { Readability } = require('@mozilla/readability');
+const iconv = require('iconv-lite');
 
 const UA = 'OneWayChatAI-Bot/1.0 (+https://onewaychat.ai)';
 
-const MAX_PAGES = 12;                 // pages learned per crawl
-const CONCURRENCY = 8;                // parallel fetch+extract workers
-const PER_PAGE_TIMEOUT_MS = 5000;     // per fetch (applies to each redirect hop)
-const DISCOVER_DEADLINE_MS = 5500;    // stop pulling new URLs after this
-const AUX_TIMEOUT_MS = 2500;          // robots.txt / sitemap fetches
+/* UA identifies ordinary fetches; browser retry headers are built inline in fetchGuarded. */
+const BROWSER_UA =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+
+const MAX_PAGES = 40;                 // pages learned per crawl (VPS-powered)
+const CONCURRENCY = 10;               // parallel fetch+extract workers
+const PER_PAGE_TIMEOUT_MS = 6000;     // per fetch (applies to each redirect hop)
+const DISCOVER_DEADLINE_MS = 12000;   // stop pulling new URLs after this
+const AUX_TIMEOUT_MS = 4000;          // robots.txt / sitemap fetches
 const MAX_REDIRECTS = 5;
 const MAX_HTML_BYTES = 2.5 * 1024 * 1024;
 const MAX_PAGE_CHARS = 18000;         // per-page content cap
-const MAX_TOTAL_CHARS = 120000;       // whole-crawl content cap
+const MAX_TOTAL_CHARS = 300000;       // whole-crawl content cap
 
 // Paths / extensions that are never content pages
 const BLOCKED_EXT = /\.(pdf|jpe?g|png|gif|svg|webp|avif|ico|zip|gz|mp3|mp4|webm|mov|avi|docx?|xlsx?|pptx?|csv|xml|json|rss|atom|txt|woff2?|ttf|eot|css)$/i;
@@ -97,17 +102,65 @@ function assertPublicUrl(urlStr, cache) {
  */
 async function fetchGuarded(url, timeoutMs, hostCache) {
   let current = url;
+  let browserRetry = false;
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
     await assertPublicUrl(current, hostCache);
-    const res = await fetch(current, {
-      headers: {
-        'user-agent': UA,
-        accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'accept-language': 'en',
-      },
+    const browserish = browserRetry;
+    let res = await fetch(current, {
+      headers: browserish
+        ? {
+            'user-agent': BROWSER_UA,
+            accept:
+              'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+            'accept-language': 'en-US,en;q=0.9',
+            'accept-encoding': 'gzip, deflate, br',
+            'sec-ch-ua': '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+            'sec-ch-ua-mobile': '?0',
+            'sec-ch-ua-platform': '"Windows"',
+            'sec-fetch-dest': 'document',
+            'sec-fetch-mode': 'navigate',
+            'sec-fetch-site': 'none',
+            'upgrade-insecure-requests': '1',
+          }
+        : {
+            'user-agent': UA,
+            accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'accept-language': 'en',
+          },
       redirect: 'manual',
       signal: AbortSignal.timeout(timeoutMs),
     });
+
+    /*
+      Cloudflare/WAF bot-challenge: sites that 401/403/429/999 the bot UA
+      often accept a browser-shaped request. Retry ONCE per hop with real
+      browser headers before giving up on the page.
+    */
+    if (
+      !browserRetry &&
+      [401, 403, 429, 999].includes(res.status) &&
+      res.headers.get('cf-ray')
+    ) {
+      browserRetry = true;
+      res = await fetch(current, {
+        headers: {
+          'user-agent': BROWSER_UA,
+          accept:
+            'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+          'accept-language': 'en-US,en;q=0.9',
+          'sec-ch-ua': '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+          'sec-ch-ua-mobile': '?0',
+          'sec-ch-ua-platform': '"Windows"',
+          'sec-fetch-dest': 'document',
+          'sec-fetch-mode': 'navigate',
+          'sec-fetch-site': 'none',
+          'upgrade-insecure-requests': '1',
+        },
+        redirect: 'manual',
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+    }
+
     if ([301, 302, 303, 307, 308].includes(res.status)) {
       const loc = res.headers.get('location');
       if (!loc) throw new Error(`Redirect without location from ${current}`);
@@ -340,7 +393,30 @@ async function fetchAndExtract(url, hostCache) {
   if (ct && !/text\/html|application\/xhtml\+xml/i.test(ct)) return null;
   const len = parseInt(res.headers.get('content-length') || '0', 10);
   if (Number.isFinite(len) && len > MAX_HTML_BYTES) return null;
-  let html = await res.text();
+
+  /*
+    Charset-correct decode: charset from the Content-Type header, else a
+    sniff of the raw bytes' meta tag, else UTF-8. Non-UTF-8 pages
+    (latin-1, Shift_JIS, GBK…) decode via iconv-lite instead of
+    producing mojibake that would poison the knowledge base.
+  */
+  const headerCharset = (ct.match(/charset=([\w-]+)/i) || [])[1];
+  const raw = Buffer.from(await res.arrayBuffer());
+  let charset = headerCharset;
+  if (!charset) {
+    const head = raw.subarray(0, 4096).toString('latin1');
+    charset = (head.match(/<meta[^>]+charset=["']?([\w-]+)/i) || [])[1];
+  }
+  let html;
+  try {
+    const normalized = (charset || 'utf-8').toLowerCase();
+    html =
+      normalized === 'utf-8' || normalized === 'utf8'
+        ? raw.toString('utf8')
+        : iconv.decode(raw, charset);
+  } catch {
+    html = raw.toString('utf8');
+  }
   if (html.length > MAX_HTML_BYTES) html = html.slice(0, MAX_HTML_BYTES);
   // Reject JSON/RSS 200s that aren't actually documents
   if (!/<(?:!doctype|html|head|body|div|p|main|article)\b/i.test(html)) return null;
@@ -410,9 +486,47 @@ async function fetchRobots(origin, hostCache) {
 }
 
 /**
+ * Cross-page boilerplate: fat footers / legal lines that Readability keeps
+ * on some themes repeat verbatim across many pages. Count normalized lines
+ * and strip the ones appearing on 3+ pages before assembly.
+ */
+function stripRepeatedBoilerplate(pages) {
+  if (pages.length < 3) return pages;
+  const counts = new Map();
+  const keyOf = (raw) => raw.trim().replace(/\s+/g, ' ').toLowerCase();
+  for (const p of pages) {
+    const seenOnPage = new Set();
+    for (const raw of p.text.split('\n')) {
+      const line = raw.trim();
+      if (line.length < 40 || line.length > 500) continue;
+      const key = keyOf(line);
+      if (seenOnPage.has(key)) continue; // count each page once
+      seenOnPage.add(key);
+      counts.set(key, (counts.get(key) || 0) + 1);
+    }
+  }
+  const repeated = new Set();
+  for (const [key, n] of counts) if (n >= 3) repeated.add(key);
+  if (!repeated.size) return pages;
+  return pages.map((p) => ({
+    ...p,
+    text: p.text
+      .split('\n')
+      .filter((raw) => {
+        const line = raw.trim();
+        if (line.length < 40 || line.length > 500) return true;
+        return !repeated.has(keyOf(line));
+      })
+      .join('\n')
+      .trim(),
+  }));
+}
+
+/**
  * Crawl up to MAX_PAGES pages of a site and return one learnable document.
- * Workers pull from a shared BFS queue until the page cap, the queue empties,
- * or the dispatch deadline passes — typical runtime 2–4s on a VPS.
+ * Workers pull from a shared BFS queue until the page cap, the char budget,
+ * the queue empties, or the dispatch deadline passes — the /crawl route runs
+ * this as a background job, so deep crawls never block the client.
  */
 async function crawlSite(rawUrl) {
   let seedUrl;
@@ -450,10 +564,16 @@ async function crawlSite(rawUrl) {
   const pages = [];
   const seenContent = new Set();
   let siteMeta = { title: '', desc: '', ld: '' };
+  let collectedChars = 0;
   const deadline = Date.now() + DISCOVER_DEADLINE_MS;
 
   const worker = async () => {
-    while (pages.length < MAX_PAGES && queue.length > 0 && Date.now() < deadline) {
+    while (
+      pages.length < MAX_PAGES &&
+      collectedChars < MAX_TOTAL_CHARS &&
+      queue.length > 0 &&
+      Date.now() < deadline
+    ) {
       const url = queue.shift();
       if (!url || visited.has(url)) continue;
       visited.add(url);
@@ -465,6 +585,7 @@ async function crawlSite(rawUrl) {
       if (pages.length >= MAX_PAGES) break;
       seenContent.add(fingerprint);
       pages.push({ url, title: page.title, text: page.text.slice(0, MAX_PAGE_CHARS) });
+      collectedChars += page.text.length;
       if (pages.length === 1) siteMeta = { title: page.title, desc: page.desc, ld: page.ld };
       for (const link of page.links) pushUrl(link);
     }
@@ -478,6 +599,9 @@ async function crawlSite(rawUrl) {
     );
   }
 
+  // Cross-page footer/nav dedupe before assembly
+  const cleaned = stripRepeatedBoilerplate(pages);
+
   // Assemble one learnable document: site header + per-page sections
   const header = [`Website: ${siteMeta.title || seedUrl.hostname}`, `Source: ${seedUrl.hostname}`];
   if (siteMeta.desc) header.push(siteMeta.desc);
@@ -485,7 +609,7 @@ async function crawlSite(rawUrl) {
   const sections = [header.join('\n')];
   let total = sections[0].length;
   let learned = 0;
-  for (const p of pages) {
+  for (const p of cleaned) {
     const section = `\n\n---\n${p.title || 'Page'}\n${p.url}\n\n${p.text}`;
     if (total + section.length > MAX_TOTAL_CHARS) break;
     sections.push(section);
@@ -495,8 +619,12 @@ async function crawlSite(rawUrl) {
 
   return {
     text: sections.join('\n').trim(),
-    pages: learned || pages.length,
-    urls: pages.slice(0, learned || pages.length).map((p) => p.url),
+    pages: learned || cleaned.length,
+    urls: cleaned.slice(0, learned || cleaned.length).map((p) => p.url),
+    // Per-page objects so ingestion can chunk + tag sources individually.
+    sections: cleaned
+      .slice(0, learned || cleaned.length)
+      .map((p) => ({ title: p.title, url: p.url, text: p.text })),
   };
 }
 

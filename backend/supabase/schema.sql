@@ -239,3 +239,39 @@ create index if not exists documents_org_idx
 
 create index if not exists bookings_org_idx
   on public.bookings(organization_id);
+
+
+-- ============================================================
+-- Vector search: HNSW (supersedes the ivfflat index above)
+-- HNSW gives better recall and consistent latency at every
+-- table size; ivfflat degrades on small datasets (lists=100).
+-- Requires pgvector >= 0.5 (standard on Supabase). Re-runnable.
+-- ============================================================
+drop index if exists document_sections_embedding_idx;
+create index if not exists document_sections_embedding_hnsw
+  on public.document_sections using hnsw (embedding vector_cosine_ops);
+drop index if exists document_sections_embedding_idx;
+
+-- ============================================================
+-- Answer-cache busting: chat.js keys its in-memory answer cache on
+-- organizations.version; bump it whenever an org's knowledge changes
+-- (document inserted/updated/deleted) so fresh crawls/uploads reflect
+-- immediately instead of waiting for the 10-minute TTL.
+-- Run ONCE in the Supabase SQL Editor (additive, safe to re-run).
+-- ============================================================
+alter table public.organizations add column if not exists version int not null default 0;
+
+create or replace function public.bump_org_version() returns trigger
+language plpgsql as $$
+begin
+  update public.organizations
+     set version = version + 1
+   where id = coalesce(new.organization_id, old.organization_id);
+  return coalesce(new, old);
+end;
+$$;
+
+drop trigger if exists documents_bump_version on public.documents;
+create trigger documents_bump_version
+  after insert or update or delete on public.documents
+  for each row execute function public.bump_org_version();

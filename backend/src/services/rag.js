@@ -54,6 +54,15 @@ async function ingestDocument({ organizationId, title, sourceType, url, text }) 
   }
 }
 
+async function markDocumentFailed(organizationId, documentId) {
+  const { error } = await supabaseAdmin
+    .from('documents')
+    .update({ status: 'failed' })
+    .eq('id', documentId)
+    .eq('organization_id', organizationId);
+  if (error) console.error('markDocumentFailed:', error.message);
+}
+
 async function deleteDocument(organizationId, documentId) {
   const { error } = await supabaseAdmin
     .from('documents')
@@ -88,4 +97,78 @@ async function trackUsage(organizationId, eventType, tokens = 0) {
     .insert({ organization_id: organizationId, event_type: eventType, tokens });
 }
 
-module.exports = { ingestDocument, deleteDocument, retrieveContext, trackUsage };
+/* --------------------------------------------------------------- */
+/* Background crawl ingestion (used by the async /crawl route)      */
+/* --------------------------------------------------------------- */
+
+/** Quota check + placeholder row (status 'processing') created BEFORE the crawl starts. */
+async function createPendingDocument({ organizationId, title, sourceType, url }) {
+  const { count } = await supabaseAdmin
+    .from('documents')
+    .select('id', { count: 'exact', head: true })
+    .eq('organization_id', organizationId);
+
+  if (count >= config.freeTierQuotas.documentsMax) {
+    throw Object.assign(
+      new Error(`Free plan limit reached (${config.freeTierQuotas.documentsMax} documents). Upgrade to add more.`),
+      { status: 402 }
+    );
+  }
+
+  const { data: doc, error: docErr } = await supabaseAdmin
+    .from('documents')
+    .insert({ organization_id: organizationId, title, source_type: sourceType, url, status: 'processing' })
+    .select()
+    .single();
+
+  if (docErr) throw docErr;
+  return doc;
+}
+
+/**
+ * Chunk -> embed -> store into an EXISTING document row, with
+ * source-attributed, per-section chunking when sections are provided:
+ * each chunk gets a `Source: title (url)` prefix so retrieved passages
+ * cite their page (the product promises "point back to the source").
+ * Cross-page straddling is impossible — chunks never span two sections.
+ */
+async function ingestIntoDocument({ documentId, organizationId, title, sourceType, url, text, sections }) {
+  try {
+    let chunks;
+    if (Array.isArray(sections) && sections.length > 0) {
+      chunks = [];
+      for (const s of sections) {
+        const prefix = `Source: ${s.title || s.url} (${s.url})\n`;
+        for (const c of require('./ingest').chunkText(s.text)) chunks.push(prefix + c);
+      }
+    } else {
+      chunks = require('./ingest').chunkText(text);
+    }
+    if (chunks.length === 0) throw new Error('No meaningful content extracted');
+
+    const vectors = await require('./embeddings').embedBatch(chunks);
+
+    const rows = chunks.map((content, i) => ({
+      document_id: documentId,
+      organization_id: organizationId,
+      content,
+      embedding: vectors[i],
+    }));
+
+    // Insert in batches of 50
+    for (let i = 0; i < rows.length; i += 50) {
+      const { error } = await supabaseAdmin.from('document_sections').insert(rows.slice(i, i + 50));
+      if (error) throw error;
+    }
+
+    await supabaseAdmin.from('documents').update({ status: 'ready' }).eq('id', documentId);
+    await trackUsage(organizationId, 'embedding', rows.length);
+
+    return { documentId, chunks: rows.length };
+  } catch (err) {
+    await supabaseAdmin.from('documents').update({ status: 'failed' }).eq('id', documentId);
+    throw err;
+  }
+}
+
+module.exports = { ingestDocument, createPendingDocument, ingestIntoDocument, markDocumentFailed, deleteDocument, retrieveContext, trackUsage };

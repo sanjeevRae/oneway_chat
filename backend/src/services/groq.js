@@ -43,7 +43,7 @@ function withTimeout(promise, ms, label) {
   });
 }
 
-function groqRequest(messages, tools) {
+function groqRequest(messages, tools, stream) {
   return () =>
     getGroq().chat.completions.create({
       model: config.groq.model,
@@ -51,17 +51,18 @@ function groqRequest(messages, tools) {
       temperature: 0.4,
       max_tokens: 600,
       ...(tools && tools.length ? { tools, tool_choice: 'auto' } : {}),
+      ...(stream ? { stream: true } : {}),
     });
 }
 
-async function callChatCompletion(messages, tools) {
+async function callChatCompletion(messages, tools, stream) {
   const providers = [];
 
   if (config.groq.apiKey && Date.now() >= cooldowns.groq1) {
     providers.push({
       name: 'groq',
       key: 'groq1',
-      run: () => withTimeout(groqRequest(messages, tools)(), GROQ_TIMEOUT_MS, 'Groq'),
+      run: () => withTimeout(groqRequest(messages, tools, stream)(), GROQ_TIMEOUT_MS, 'Groq'),
     });
   }
 
@@ -99,7 +100,7 @@ async function callChatCompletion(messages, tools) {
     providers.push({
       name: 'groq',
       key: 'groq1',
-      run: () => withTimeout(groqRequest(messages, tools)(), GROQ_TIMEOUT_MS, 'Groq'),
+      run: () => withTimeout(groqRequest(messages, tools, stream)(), GROQ_TIMEOUT_MS, 'Groq'),
     });
   }
 
@@ -278,4 +279,175 @@ async function runChatTurn({ messages, tools, executeTool, maxToolRounds = 3 }) 
   };
 }
 
-module.exports = { buildSystemPrompt, getToolSchemas, runChatTurn };
+/* ------------------------------------------------------------------ */
+/* Streaming                                                            */
+/* ------------------------------------------------------------------ */
+
+async function streamChatCompletion(messages, tools) {
+  const providers = [];
+
+  const groqStream = () =>
+    withTimeout(
+      getGroq().chat.completions.create({
+        model: config.groq.model,
+        messages,
+        temperature: 0.4,
+        max_tokens: 600,
+        stream: true,
+        ...(tools && tools.length ? { tools, tool_choice: 'auto' } : {}),
+      }),
+      GROQ_TIMEOUT_MS,
+      'Groq stream'
+    );
+
+  if (config.groq.apiKey && Date.now() >= cooldowns.groq1) {
+    providers.push({ name: 'groq', key: 'groq1', run: groqStream });
+  }
+
+  if (config.openrouter.apiKey && Date.now() >= cooldowns.openrouter) {
+    providers.push({
+      name: 'openrouter',
+      key: 'openrouter',
+      run: async () => {
+        const res = await fetch(`${config.openrouter.baseUrl}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${config.openrouter.apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: config.openrouter.model,
+            messages,
+            temperature: 0.4,
+            max_tokens: 600,
+            stream: true,
+            ...(tools && tools.length ? { tools, tool_choice: 'auto' } : {}),
+          }),
+          signal: AbortSignal.timeout(30000),
+        });
+        if (!res.ok || !res.body) throw new Error(`OpenRouter ${res.status}`);
+        return res.body; // web ReadableStream of SSE bytes
+      },
+    });
+  }
+
+  if (providers.length === 0 && config.groq.apiKey) {
+    providers.push({ name: 'groq', key: 'groq1', run: groqStream });
+  }
+
+  let lastErr;
+  for (const provider of providers) {
+    try {
+      const stream = await provider.run();
+      cooldowns[provider.key] = 0;
+      console.log(`[LLM] Stream served by ${provider.name}`);
+      return { stream, provider: provider.name };
+    } catch (err) {
+      lastErr = err;
+      cooldowns[provider.key] = Date.now() + 30000;
+    }
+  }
+  throw lastErr || new Error('No streaming LLM provider available');
+}
+
+/** Yield OpenAI-shaped chunks from an SDK async-iterable OR a web ReadableStream. */
+async function* iterateSse(stream) {
+  if (stream && typeof stream[Symbol.asyncIterator] === 'function') {
+    for await (const chunk of stream) yield chunk;
+    return;
+  }
+  const reader = stream.getReader();
+  const decoder = new TextDecoder();
+  let buf = '';
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    const events = buf.split('\n\n');
+    buf = events.pop();
+    for (const evt of events) {
+      for (const line of evt.split('\n')) {
+        if (!line.startsWith('data:')) continue;
+        const data = line.slice(5).trim();
+        if (data === '[DONE]') return;
+        try {
+          yield JSON.parse(data);
+        } catch { /* partial frame — next read completes it */ }
+      }
+    }
+  }
+}
+
+/**
+ * Stream one chat turn with tool support.
+ * Deltas are pushed through onDelta the moment they arrive; tool rounds
+ * emit nothing until final text starts. Relies on llama-3.1 emitting
+ * content and tool_calls exclusively (never mixed within one completion).
+ * Returns { reply, toolCallsExecuted, provider }.
+ */
+async function runChatTurnStream({ messages, tools, executeTool, onDelta, maxToolRounds = 3 }) {
+  let convo = [...messages];
+  const executedTools = [];
+  let reply = '';
+  let usedProvider = 'unknown';
+
+  for (let round = 0; round <= maxToolRounds; round++) {
+    const { stream, provider } = await streamChatCompletion(convo, tools);
+    usedProvider = provider;
+
+    let text = '';
+    const toolAcc = new Map();
+    let finish = null;
+
+    for await (const chunk of iterateSse(stream)) {
+      const choice = chunk && chunk.choices && chunk.choices[0];
+      if (!choice) continue;
+      if (choice.finish_reason) finish = choice.finish_reason;
+      const delta = choice.delta || {};
+      if (delta.content) {
+        text += delta.content;
+        reply += delta.content;
+        if (onDelta) onDelta(delta.content);
+      }
+      if (delta.tool_calls) {
+        for (const tc of delta.tool_calls) {
+          const idx = tc.index ?? 0;
+          if (!toolAcc.has(idx)) {
+            toolAcc.set(idx, { id: tc.id || `call_${idx}`, type: 'function', function: { name: '', arguments: '' } });
+          }
+          const acc = toolAcc.get(idx);
+          if (tc.id) acc.id = tc.id;
+          if (tc.function && tc.function.name) acc.function.name += tc.function.name;
+          if (tc.function && tc.function.arguments) acc.function.arguments += tc.function.arguments;
+        }
+      }
+    }
+
+    const toolCalls = [...toolAcc.values()].filter((t) => t.function.name);
+    if (toolCalls.length && (finish === 'tool_calls' || !text)) {
+      convo.push({ role: 'assistant', content: text || null, tool_calls: toolCalls });
+      for (const tc of toolCalls) {
+        let result;
+        try {
+          const args = JSON.parse(tc.function.arguments || '{}');
+          result = await executeTool(tc.function.name, args);
+          executedTools.push({ name: tc.function.name, args });
+        } catch (e) {
+          result = { error: e.message };
+        }
+        convo.push({ role: 'tool', tool_call_id: tc.id, content: JSON.stringify(result) });
+      }
+      continue; // stream the follow-up completion
+    }
+
+    return { reply, toolCallsExecuted: executedTools, provider: usedProvider };
+  }
+
+  return {
+    reply: reply || "I'm sorry, I couldn't complete that request.",
+    toolCallsExecuted: executedTools,
+    provider: usedProvider,
+  };
+}
+
+module.exports = { buildSystemPrompt, getToolSchemas, runChatTurn, runChatTurnStream };

@@ -1,7 +1,7 @@
 const express = require('express');
 const supabaseAdmin = require('../lib/supabase');
 const { requireAuth } = require('../middleware/auth');
-const { ingestDocument, deleteDocument, trackUsage } = require('../services/rag');
+const { ingestDocument, deleteDocument, trackUsage, createPendingDocument, ingestIntoDocument, markDocumentFailed } = require('../services/rag');
 const { crawlSite } = require('../services/crawler');
 const { importGoogleDrive, importNotion } = require('../services/imports');
 
@@ -37,21 +37,41 @@ router.post('/crawl', async (req, res) => {
     }
     normalized = parsed.href;
 
-    const crawl = await crawlSite(normalized);
-    if (!crawl.text || crawl.text.length < 50) {
-      return res.status(400).json({ error: 'Found the site but no readable content on its pages. Try pasting content instead.' });
-    }
-
-    const result = await ingestDocument({
+    /*
+      Deep crawls (40 pages, sitemaps, structured data) plus embedding can
+      take 30s+. The pending row is created synchronously so quota is
+      enforced up-front, then the crawl runs in the background and the
+      Train list polls the document status until it flips to
+      'ready' / 'failed'.
+    */
+    const doc = await createPendingDocument({
       organizationId: req.orgId,
       title: title || parsed.hostname,
       sourceType: 'crawl',
       url: normalized,
-      text: crawl.text,
     });
 
-    trackUsage(req.orgId, 'crawl', crawl.pages).catch(() => {});
-    res.json({ ok: true, pages: crawl.pages, chars: crawl.text.length, ...result });
+    res.json({ ok: true, status: 'processing', documentId: doc.id });
+
+    (async () => {
+      try {
+        const crawl = await crawlSite(normalized);
+        if (!crawl.text || crawl.text.length < 50) {
+          throw new Error('Found the site but no readable content on its pages');
+        }
+        await ingestIntoDocument({
+          documentId: doc.id,
+          organizationId: req.orgId,
+          text: crawl.text,
+          sections: crawl.sections,
+        });
+        await trackUsage(req.orgId, 'crawl', crawl.pages);
+        console.log(`[Crawl] Learned ${crawl.pages} page(s) from ${parsed.hostname} into doc ${doc.id}`);
+      } catch (err) {
+        console.error(`[Crawl] Failed for ${normalized}:`, err.message);
+        await markDocumentFailed(req.orgId, doc.id);
+      }
+    })();
   } catch (err) {
     res.status(err.status || 500).json({ error: err.message });
   }

@@ -1017,6 +1017,15 @@
 
     try {
 
+      /*
+        SSE streaming: ask for an event stream and push tokens into the
+        bubble as they arrive — first token typically lands in ~200-400ms
+        instead of waiting out the whole completion.
+
+        On `done` the server echoes sessionId + the full reply; tool turns
+        and any non-SSE server fall back to the classic JSON path below.
+      */
+
       const response =
         await fetch(
           API_BASE + '/api/chat',
@@ -1025,7 +1034,9 @@
 
             headers: {
               'Content-Type':
-                'application/json'
+                'application/json',
+              Accept:
+                'text/event-stream, application/json'
             },
 
             body: JSON.stringify({
@@ -1038,10 +1049,153 @@
                 message,
 
               channel:
-                'widget'
+                'widget',
+
+              stream: true
             })
           }
         );
+
+      const contentType =
+        response.headers.get(
+          'content-type'
+        ) || '';
+
+      if (
+        response.ok &&
+        contentType.indexOf(
+          'text/event-stream'
+        ) !== -1 &&
+        response.body &&
+        typeof response.body.getReader ===
+          'function'
+      ) {
+
+        const reader =
+          response.body.getReader();
+        const decoder =
+          new TextDecoder();
+        let buffer = '';
+        let replyText = '';
+        let serverSession =
+          sessionId;
+
+        while (true) {
+          const chunk =
+            await reader.read();
+          if (chunk.done) {
+            break;
+          }
+
+          buffer +=
+            decoder.decode(
+              chunk.value,
+              { stream: true }
+            );
+
+          const events =
+            buffer.split('\n\n');
+          buffer = events.pop();
+
+          for (const evt of events) {
+            for (const line of evt.split(
+              '\n'
+            )) {
+              if (
+                line.indexOf('data:') !==
+                0
+              ) {
+                continue;
+              }
+
+              let payload;
+              try {
+                payload = JSON.parse(
+                  line
+                    .slice(5)
+                    .trim()
+                );
+              } catch (e) {
+                continue;
+              }
+
+              if (payload.sessionId) {
+                serverSession =
+                  payload.sessionId;
+              }
+
+              if (payload.error) {
+                loading.remove();
+                addMessage(
+                  payload.error,
+                  'bot'
+                );
+                return;
+              }
+
+              if (payload.delta) {
+                replyText +=
+                  payload.delta;
+                updateStreamingMessage(
+                  replyText
+                );
+              }
+
+              if (payload.done) {
+                loading.remove();
+                if (
+                  payload.reply &&
+                  payload.reply !==
+                    replyText
+                ) {
+                  replyText =
+                    payload.reply;
+                  updateStreamingMessage(
+                    replyText
+                  );
+                }
+                if (
+                  serverSession !==
+                    sessionId &&
+                  serverSession
+                ) {
+                  sessionId =
+                    serverSession;
+                  if (
+                    typeof persistSessionId ===
+                    'function'
+                  ) {
+                    persistSessionId(
+                      sessionId
+                    );
+                  }
+                }
+                return;
+              }
+            }
+          }
+        }
+
+        /*
+          Stream ended without a done event — keep whatever arrived.
+        */
+        loading.remove();
+        if (replyText) {
+          updateStreamingMessage(
+            replyText
+          );
+        } else {
+          addMessage(
+            'Sorry, I could not generate a response.',
+            'bot'
+          );
+        }
+        return;
+      }
+
+      /*
+        Fallback: classic JSON exchange.
+      */
 
       const data =
         await response.json();

@@ -21,6 +21,7 @@
     "express-rate-limit": "^7.4.0",
     "groq-sdk": "^0.7.0",
     "helmet": "^7.1.0",
+    "iconv-lite": "^0.7.3",
     "jsdom": "^24.1.0",
     "pdf-parse": "^1.1.1",
     "uuid": "^9.0.1",
