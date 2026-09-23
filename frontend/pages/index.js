@@ -84,7 +84,7 @@ function About() {
 
           {/* Fast & Reliable Answers */}
           <div className="relative flex flex-col rounded-2xl bg-[#FEEFDB] p-7 lg:col-span-3 lg:row-span-2">
-            <h3 className="relative z-20 text-2xl font-bold text-ink-900">Fast &amp; Reliable Answers</h3>
+            <h3 className="relative z-20 text-2xl pt-3 font-bold text-ink-900">Fast &amp; Reliable Answers</h3>
             <div className="relative -mb-7 -mr-7 mt-5 flex-1">
               <img
                 src={`${basePath}/components/rocket-trimmed.png`}
