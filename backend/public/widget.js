@@ -412,6 +412,64 @@
     }
 
     /* =========================
+       SUGGESTIONS
+    ========================= */
+
+    #onewaybot-suggestions {
+      display: flex;
+
+      flex-wrap: wrap;
+
+      gap: 6px;
+
+      padding: 8px 9px;
+
+      border-top: 1px solid #dddddd;
+
+      background: #ffffff;
+
+      max-height: 96px;
+
+      overflow-y: auto;
+    }
+
+    /* Empty container -> take no space at all. */
+
+    #onewaybot-suggestions:empty {
+      display: none;
+    }
+
+    .onewaybot-suggestion {
+      border: 1px solid #dcdcfb;
+
+      border-radius: 999px;
+
+      padding: 5px 10px;
+
+      background: #f4f4ff;
+
+      color: #4f46e5;
+
+      font-size: 12px;
+
+      line-height: 1.3;
+
+      cursor: pointer;
+
+      font-family: inherit;
+
+      text-align: left;
+    }
+
+    .onewaybot-suggestion:hover {
+      background: #6366f1;
+
+      border-color: #6366f1;
+
+      color: #ffffff;
+    }
+
+    /* =========================
        MOBILE
     ========================= */
 
@@ -481,6 +539,8 @@
 
     <div id="onewaybot-messages"></div>
 
+    <div id="onewaybot-suggestions"></div>
+
     <div id="onewaybot-input-area">
 
       <input
@@ -519,6 +579,190 @@
     document.getElementById(
       'onewaybot-close'
     );
+
+  const suggestionsBox =
+    document.getElementById(
+      'onewaybot-suggestions'
+    );
+
+  /* =========================
+     SUGGESTED QUESTIONS
+
+     Shown as clickable chips above
+     the input. On open -> all of
+     them; while typing -> only the
+     ones whose keywords match the
+     typed words (prefix or sub-
+     string match, case-insensitive).
+  ========================= */
+
+  const SUGGESTED_QUESTIONS = [
+    {
+      text: 'What services do you provide?',
+      keywords: [
+        'service',
+        'services',
+        'provide',
+        'offer',
+        'do'
+      ]
+    },
+    {
+      text: 'What are your opening hours?',
+      keywords: [
+        'hour',
+        'hours',
+        'opening',
+        'open',
+        'timing',
+        'time',
+        'when',
+        'close',
+        'closed'
+      ]
+    },
+    {
+      text: 'How can I book an appointment?',
+      keywords: [
+        'book',
+        'booking',
+        'appointment',
+        'reserve',
+        'reservation',
+        'schedule'
+      ]
+    },
+    {
+      text: 'What services are available?',
+      keywords: [
+        'available',
+        'availability',
+        'service',
+        'services',
+        'offer'
+      ]
+    },
+    {
+      text: 'How much do your services cost?',
+      keywords: [
+        'cost',
+        'price',
+        'pricing',
+        'much',
+        'charge',
+        'fee',
+        'rate',
+        'expensive'
+      ]
+    },
+    {
+      text: 'Where are you located?',
+      keywords: [
+        'located',
+        'location',
+        'where',
+        'address',
+        'place'
+      ]
+    },
+    {
+      text: 'How can I contact you?',
+      keywords: [
+        'contact',
+        'email',
+        'phone',
+        'call',
+        'reach',
+        'number'
+      ]
+    }
+  ];
+
+  function renderSuggestions(rawQuery) {
+
+    const query =
+      String(rawQuery || '')
+        .toLowerCase()
+        .trim();
+
+    let list = SUGGESTED_QUESTIONS;
+
+    if (query) {
+
+      const words =
+        query.split(/\s+/);
+
+      list = list.filter(function (item) {
+
+        return item.keywords.some(
+          function (keyword) {
+
+            /*
+              Three ways to match:
+              1. the whole query contains
+                 the keyword,
+              2. a typed word starts the
+                 keyword ("serv" -> service),
+              3. the keyword starts a typed
+                 word ("openin" matches when
+                 keyword is shorter).
+            */
+
+            return (
+              query.indexOf(keyword) !== -1 ||
+              words.some(function (word) {
+                return (
+                  keyword.indexOf(word) === 0 ||
+                  word.indexOf(keyword) === 0
+                );
+              })
+            );
+          }
+        );
+      });
+    }
+
+    suggestionsBox.innerHTML = '';
+
+    list.forEach(function (item) {
+
+      const chip =
+        document.createElement('button');
+
+      chip.type = 'button';
+
+      chip.className =
+        'onewaybot-suggestion';
+
+      chip.textContent = item.text;
+
+      chip.addEventListener(
+        'click',
+        function () {
+
+          /*
+            Clicking a suggestion sends it
+            as a normal chat message.
+          */
+
+          input.value = item.text;
+
+          renderSuggestions('');
+
+          sendMessage();
+        }
+      );
+
+      suggestionsBox.appendChild(chip);
+    });
+  }
+
+  input.addEventListener(
+    'input',
+    function () {
+      renderSuggestions(input.value);
+    }
+  );
 
   /* =========================
      LOAD BOT SETTINGS
@@ -949,6 +1193,8 @@
       );
     }
 
+    renderSuggestions('');
+
     input.focus();
   }
 
@@ -979,6 +1225,8 @@
     */
 
     input.value = '';
+
+    renderSuggestions('');
 
     send.disabled = true;
 
