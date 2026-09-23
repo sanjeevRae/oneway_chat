@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import Script from 'next/script';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/router';
 
 function ArrowUpRightIcon() {
@@ -157,13 +157,71 @@ function filterHeroSuggestions(value) {
   );
 }
 
+const PHRASE_PAUSE_FULL = 1600;
+const PHRASE_PAUSE_EMPTY = 450;
+
 function Hero() {
   const { basePath } = useRouter();
 
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
+  const [typedPlaceholder, setTypedPlaceholder] = useState('Ask a question…');
   const inputRef = useRef(null);
+
+  /*
+    Typewriter placeholder: types each question, holds,
+    deletes, and moves to the next. Runs only while the
+    user has not tapped into the bar (on focus or while
+    the suggestion panel is open, it rests at the static
+    "Ask a question…" text).
+  */
+  useEffect(() => {
+    if (query || open) {
+      setTypedPlaceholder('Ask a question…');
+      return;
+    }
+
+    const phrases = HERO_SUGGESTIONS.slice(0, 4).map((s) => s.text);
+
+    let phrase = 0;
+    let char = 0;
+    let deleting = false;
+    let timer = null;
+
+    function step() {
+      const full = phrases[phrase];
+
+      if (!deleting) {
+        char += 1;
+        setTypedPlaceholder(full.slice(0, char));
+
+        if (char >= full.length) {
+          deleting = true;
+          timer = setTimeout(step, PHRASE_PAUSE_FULL);
+          return;
+        }
+
+        timer = setTimeout(step, 55);
+      } else {
+        char -= 1;
+        setTypedPlaceholder(full.slice(0, char));
+
+        if (char <= 0) {
+          deleting = false;
+          phrase = (phrase + 1) % phrases.length;
+          timer = setTimeout(step, PHRASE_PAUSE_EMPTY);
+          return;
+        }
+
+        timer = setTimeout(step, 24);
+      }
+    }
+
+    timer = setTimeout(step, 800);
+
+    return () => clearTimeout(timer);
+  }, [query, open]);
 
   const suggestions = filterHeroSuggestions(query);
 
@@ -246,8 +304,8 @@ function Hero() {
                 ref={inputRef}
                 type="text"
                 value={query}
-                placeholder="Ask something…"
-                aria-label="Ask something"
+                placeholder={typedPlaceholder}
+                aria-label="Ask a question"
                 className="w-full bg-transparent text-sm text-ink-700 outline-none placeholder:text-ink-400"
                 onChange={(e) => {
                   setQuery(e.target.value);
