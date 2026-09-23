@@ -930,6 +930,51 @@
   }
 
   /* =========================
+     STREAMING MESSAGE
+  ========================= */
+
+  /*
+    The SSE path renders into ONE growing bot bubble.
+
+    First delta creates the bubble; every later delta replaces its
+    innerHTML with the Markdown-rendered text, so the answer "types"
+    into place and the final formatting is identical to the
+    non-streamed addMessage output.
+
+    streamingBubble is reset per question in sendUserMessage, and the
+    "Typing..." indicator is removed as soon as real text arrives (it
+    would otherwise sit below the answer for the whole stream).
+  */
+
+  let streamingBubble = null;
+
+  let activeLoading = null;
+
+  function updateStreamingMessage(text) {
+
+    if (activeLoading) {
+
+      activeLoading.remove();
+
+      activeLoading = null;
+    }
+
+    if (!streamingBubble) {
+
+      streamingBubble =
+        addMessage('', 'bot');
+    }
+
+    streamingBubble.innerHTML =
+      renderMarkdown(text);
+
+    messages.scrollTop =
+      messages.scrollHeight;
+
+    return streamingBubble;
+  }
+
+  /* =========================
      OPEN CHAT
   ========================= */
 
@@ -992,6 +1037,12 @@
 
   async function sendUserMessage(message) {
 
+    /*
+      Each question gets its own answer bubble.
+    */
+
+    streamingBubble = null;
+
     send.disabled = true;
 
     input.disabled = true;
@@ -1014,6 +1065,9 @@
         'Typing...',
         'bot'
       );
+
+    activeLoading =
+      loading;
 
     try {
 

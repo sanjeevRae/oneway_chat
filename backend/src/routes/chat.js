@@ -61,6 +61,16 @@ router.post('/', async (req, res) => {
     monthStart.setHours(0, 0, 0, 0);
 
     /*
+      SSE opt-in, decided ONCE up here: the cache-hit branch below has its
+      own streaming response path and runs BEFORE the LLM section, so the
+      later `if (wantsStream)` block would otherwise hit the temporal dead
+      zone (ReferenceError -> 500 on every cached answer).
+    */
+    const wantsStream =
+      String(req.headers.accept || '').includes('text/event-stream') ||
+      req.body.stream === true;
+
+    /*
       Two-stage parallel fetch.
 
       STAGE 1 — org existence (+ its cache-busting `version` column) and this
@@ -209,10 +219,6 @@ router.post('/', async (req, res) => {
       the final text starts flowing. X-Accel-Buffering: no keeps nginx from
       coalescing the deltas.
     */
-    const wantsStream =
-      String(req.headers.accept || '').includes('text/event-stream') ||
-      req.body.stream === true;
-
     if (wantsStream) {
       let streamed = '';
       let finalReply = '';
