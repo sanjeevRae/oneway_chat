@@ -60,11 +60,11 @@ function About() {
               Manage Everything
               <ArrowUpRightIcon />
             </h3>
-            <div className="absolute inset-x-0 bottom-0 top-[28%]">
+            <div className="absolute bottom-0 right-0 top-[28%] w-[95%] overflow-hidden rounded-br-2xl">
               <img
                 src={`${basePath}/components/dashboard.png`}
                 alt="Dashboard screenshot"
-                className="h-full w-full object-contain object-top"
+                className="h-full w-full object-contain object-right-bottom"
               />
             </div>
           </div>
