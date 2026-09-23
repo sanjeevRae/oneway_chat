@@ -129,8 +129,7 @@ function Hero() {
         {/* Left — headline, subtext, ask bar */}
         <div>
           <h1 className="text-4xl font-bold leading-[1.15] tracking-tight text-ink-900 sm:text-[44px] sm:leading-[1.12]">
-            Make AI Your Business’s 
-            <br />Always-On Assistant
+  
           </h1>
 
           <p className="mt-6 max-w-lg text-[15px] leading-relaxed text-ink-500">
