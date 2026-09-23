@@ -145,7 +145,36 @@ export default function Dashboard() {
   }, [router.isReady, router.query.org]);
 
   if (error) return <main className="mx-auto max-w-4xl px-6 py-16 text-sm text-red-500">{error}</main>;
-  if (!data) return <main className="mx-auto max-w-4xl px-6 py-16 text-sm text-ink-400">Loading dashboard…</main>;
+
+  /*
+    Skeleton in the real layout instead of a bare "Loading dashboard…" line:
+    the page keeps its shape while /api/org/me is in flight, so it reads as
+    instant rather than empty.
+  */
+  if (!data) {
+    return (
+      <main className="mx-auto max-w-5xl px-6 py-12" aria-busy="true" aria-live="polite">
+        <span className="sr-only">Loading dashboard</span>
+
+        <div className="mb-2 h-3 w-28 animate-pulse rounded bg-gray-200" />
+        <div className="mb-10 h-8 w-52 animate-pulse rounded bg-gray-200" />
+
+        <div className="mb-12 grid grid-cols-2 gap-4 md:grid-cols-4">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="glass-hover p-5">
+              <div className="h-7 w-20 animate-pulse rounded bg-gray-200" />
+              <div className="mt-2 h-3 w-28 animate-pulse rounded bg-gray-200" />
+            </div>
+          ))}
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="quiet-card h-80 animate-pulse bg-gray-50" />
+          <div className="quiet-card h-80 animate-pulse bg-gray-50" />
+        </div>
+      </main>
+    );
+  }
 
   const { org, usage } = data;
 

@@ -57,8 +57,30 @@ function localEmbed(text) {
   return vec.map((v) => v / norm);
 }
 
+/**
+ * Embedding cache.
+ *
+ * Repeat questions are the norm ("what services do you offer?"), so query
+ * vectors are memoised in-process. A repeat message then skips the embedding
+ * call entirely and goes straight to the vector search.
+ */
+const embeddingCache = new Map();
+const EMBEDDING_CACHE_MAX = 200;
+
 async function embedText(text) {
+  const key = String(text || '').trim().toLowerCase().slice(0, 400);
+
+  if (key && embeddingCache.has(key)) {
+    return embeddingCache.get(key);
+  }
+
   const [vec] = await embedBatch([text]);
+
+  if (key) {
+    if (embeddingCache.size >= EMBEDDING_CACHE_MAX) embeddingCache.clear();
+    embeddingCache.set(key, vec);
+  }
+
   return vec;
 }
 

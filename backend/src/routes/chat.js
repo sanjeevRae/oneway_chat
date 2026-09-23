@@ -19,49 +19,62 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'orgId, sessionId and message are required' });
     }
 
-    // Load org + settings (public info only)
-    const { data: org, error: orgErr } = await supabaseAdmin
-      .from('organizations')
-      .select('id, name, industry')
-      .eq('id', orgId)
-      .single();
-    if (orgErr || !org) return res.status(404).json({ error: 'Business not found' });
-
-    const { data: settings } = await supabaseAdmin
-      .from('settings')
-      .select('*')
-      .eq('organization_id', orgId)
-      .maybeSingle();
-
-    // ---- Free-tier quota check (messages/month) ----
-    // Plan quota (free/pro/agency) takes priority; falls back to platform default.
     const monthStart = new Date();
     monthStart.setDate(1);
     monthStart.setHours(0, 0, 0, 0);
-    const { count: msgCount } = await supabaseAdmin
-      .from('usage_events')
-      .select('id', { count: 'exact', head: true })
-      .eq('organization_id', orgId)
-      .eq('event_type', 'message')
-      .gte('created_at', monthStart.toISOString());
 
-    const { data: orgPlan } = await supabaseAdmin
-      .from('organizations')
-      .select('monthly_message_quota, plan, plan_expires_at')
-      .eq('id', orgId)
-      .single();
+    /*
+      One parallel batch instead of six sequential round trips.
 
-    // Paid plan expired? Downgrade to free quotas.
-    const planActive = orgPlan?.plan && orgPlan.plan !== 'free'
-      && (!orgPlan.plan_expires_at || new Date(orgPlan.plan_expires_at) > new Date());
+      Previously org -> settings -> usage count -> org again (plan) -> RAG ->
+      history ran one after another, so every single message paid several
+      hundred ms of dead waiting time before the LLM was even called. None of
+      these queries depend on each other, so they now go out together.
+    */
+    const [orgRes, settingsRes, usageRes, historyRes, contextChunks] = await Promise.all([
+      // Org + quota columns in one read (this was two separate queries).
+      supabaseAdmin
+        .from('organizations')
+        .select('id, name, industry, monthly_message_quota')
+        .eq('id', orgId)
+        .single(),
 
-    let messageQuota;
-    if (planActive) {
-      messageQuota = orgPlan.monthly_message_quota
-        ?? config.freeTierQuotas.messagesPerMonth;
-    } else {
-      messageQuota = orgPlan?.monthly_message_quota ?? config.freeTierQuotas.messagesPerMonth;
-    }
+      supabaseAdmin
+        .from('settings')
+        .select('*')
+        .eq('organization_id', orgId)
+        .maybeSingle(),
+
+      supabaseAdmin
+        .from('usage_events')
+        .select('id', { count: 'exact', head: true })
+        .eq('organization_id', orgId)
+        .eq('event_type', 'message')
+        .gte('created_at', monthStart.toISOString()),
+
+      supabaseAdmin
+        .from('chat_history')
+        .select('role, message')
+        .eq('organization_id', orgId)
+        .eq('session_id', sessionId)
+        .order('created_at', { ascending: false })
+        .limit(10),
+
+      // A retrieval failure must never break the reply.
+      retrieveContext(orgId, message).catch((err) => {
+        console.warn('RAG lookup failed, answering without knowledge:', err.message);
+        return [];
+      }),
+    ]);
+
+    const org = orgRes.data;
+    if (orgRes.error || !org) return res.status(404).json({ error: 'Business not found' });
+
+    const settings = settingsRes.data;
+
+    // ---- Free-tier quota check (messages/month) ----
+    const msgCount = usageRes.count || 0;
+    const messageQuota = org.monthly_message_quota ?? config.freeTierQuotas.messagesPerMonth;
 
     if (msgCount >= messageQuota) {
       return res.status(429).json({
@@ -71,22 +84,13 @@ router.post('/', async (req, res) => {
       });
     }
 
-    // ---- RAG retrieval ----
-    const contextChunks = await retrieveContext(orgId, message);
-
-    // ---- Conversation history (last 10 turns) ----
-    const { data: history } = await supabaseAdmin
-      .from('chat_history')
-      .select('role, message')
-      .eq('organization_id', orgId)
-      .eq('session_id', sessionId)
-      .order('created_at', { ascending: false })
-      .limit(10);
-
-    const priorMessages = (history || []).reverse().map((h) => ({
-      role: h.role,
-      content: h.message,
-    }));
+    const priorMessages = (historyRes.data || [])
+      .slice()
+      .reverse()
+      .map((h) => ({
+        role: h.role,
+        content: h.message,
+      }));
 
     // ---- LLM turn with tools ----
     const messages = [
@@ -109,19 +113,35 @@ router.post('/', async (req, res) => {
       return res.status(502).json({ error: 'AI service temporarily unavailable. Please try again.' });
     }
 
-    // ---- Persist history ----
-    await supabaseAdmin.from('chat_history').insert([
-      { organization_id: orgId, session_id: sessionId, role: 'user', message, channel },
-      { organization_id: orgId, session_id: sessionId, role: 'assistant', message: result.reply, channel },
-    ]);
+    /*
+      Reply first, persist after.
 
-    await trackUsage(orgId, 'message');
-
+      Saving the transcript and bumping the usage counter used to sit between
+      the model finishing and the browser seeing the answer, so every message
+      waited on two more Supabase round trips. They now run in the background
+      once the response is already on the wire.
+    */
     res.json({
       reply: result.reply,
       actions: result.toolCallsExecuted,
       sources: contextChunks.map((c) => c.id),
       provider: result.provider,
+    });
+
+    Promise.allSettled([
+      supabaseAdmin.from('chat_history').insert([
+        { organization_id: orgId, session_id: sessionId, role: 'user', message, channel },
+        { organization_id: orgId, session_id: sessionId, role: 'assistant', message: result.reply, channel },
+      ]),
+      trackUsage(orgId, 'message'),
+    ]).then((outcomes) => {
+      for (const outcome of outcomes) {
+        if (outcome.status === 'rejected') {
+          console.error('Post-reply persistence failed:', outcome.reason?.message || outcome.reason);
+        } else if (outcome.value?.error) {
+          console.error('Post-reply persistence failed:', outcome.value.error.message);
+        }
+      }
     });
   } catch (err) {
     console.error('Chat route error:', err);

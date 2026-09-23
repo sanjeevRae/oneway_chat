@@ -15,13 +15,41 @@ function getGroq() {
  */
 const cooldowns = { groq1: 0, openrouter: 0 }; // epoch ms until which a provider is skipped
 
+/*
+  Reply latency guard: a provider that hangs must not hold the visitor
+  hostage. After this long the call is abandoned and the next provider (or
+  the error path) takes over, so a slow/stuck upstream degrades instead of
+  freezing the chat.
+*/
+const GROQ_TIMEOUT_MS = 15000;
+
+function withTimeout(promise, ms, label) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error(`${label} timed out after ${ms}ms`)),
+      ms
+    );
+
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      }
+    );
+  });
+}
+
 function groqRequest(messages, tools) {
   return () =>
     getGroq().chat.completions.create({
       model: config.groq.model,
       messages,
       temperature: 0.4,
-      max_tokens: 800,
+      max_tokens: 600,
       ...(tools && tools.length ? { tools, tool_choice: 'auto' } : {}),
     });
 }
@@ -30,7 +58,11 @@ async function callChatCompletion(messages, tools) {
   const providers = [];
 
   if (config.groq.apiKey && Date.now() >= cooldowns.groq1) {
-    providers.push({ name: 'groq', run: groqRequest(messages, tools), key: 'groq1' });
+    providers.push({
+      name: 'groq',
+      key: 'groq1',
+      run: () => withTimeout(groqRequest(messages, tools)(), GROQ_TIMEOUT_MS, 'Groq'),
+    });
   }
 
   if (config.openrouter.apiKey && Date.now() >= cooldowns.openrouter) {
@@ -48,7 +80,7 @@ async function callChatCompletion(messages, tools) {
             model: config.openrouter.model,
             messages,
             temperature: 0.4,
-            max_tokens: 800,
+            max_tokens: 600,
             ...(tools && tools.length ? { tools, tool_choice: 'auto' } : {}),
           }),
           signal: AbortSignal.timeout(30000),
@@ -64,7 +96,11 @@ async function callChatCompletion(messages, tools) {
 
   // If everything is in cooldown, still try Groq as last resort
   if (providers.length === 0 && config.groq.apiKey) {
-    providers.push({ name: 'groq', run: groqRequest(messages, tools), key: 'groq1' });
+    providers.push({
+      name: 'groq',
+      key: 'groq1',
+      run: () => withTimeout(groqRequest(messages, tools)(), GROQ_TIMEOUT_MS, 'Groq'),
+    });
   }
 
   let lastErr;

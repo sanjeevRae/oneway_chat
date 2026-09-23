@@ -1,6 +1,6 @@
 import '../styles/globals.css';
 import { useState, useEffect } from 'react';
-import { supabase, fetchApi, getValidSession } from '../lib/supabaseClient';
+import { supabase, fetchApi, purgeDeadSession } from '../lib/supabaseClient';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import PostHog from '../components/PostHog';
@@ -23,14 +23,38 @@ export default function App({ Component, pageProps }) {
       }
     };
 
-    const failsafe = setTimeout(finish, 10000);
+    /*
+      Paint immediately from the cached session.
 
-    getValidSession()
-      .then((session) => {
+      This used to await supabase.auth.getUser() — a network round trip to
+      Supabase — before the first render of every page, which is what made
+      the dashboard feel slow. The locally cached session is enough to render
+      the shell, so it drives the first paint and validation happens in the
+      background: if the server rejects the token, the session is purged and
+      the API layer bounces the visitor to /login on its next call.
+    */
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        const session = data?.session || null;
+
         setUser(session?.user || null);
 
         if (session) {
           fetchRole(session.access_token);
+
+          supabase.auth
+            .getUser()
+            .then(({ data: verified, error }) => {
+              if (error || !verified?.user) {
+                purgeDeadSession();
+                setUser(null);
+                setRole(null);
+              }
+            })
+            .catch(() => {
+              // Offline or transient — keep the cached session.
+            });
         } else {
           setRole(null);
         }
@@ -42,6 +66,8 @@ export default function App({ Component, pageProps }) {
         setRole(null);
         finish();
       });
+
+    const failsafe = setTimeout(finish, 3000);
 
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
       setUser(session?.user || null);

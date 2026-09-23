@@ -82,6 +82,33 @@
   }
 
   /*
+    Animated "typing" bubble (three bouncing dots) shown while
+    the reply is in flight — replaces the old plain "Typing..." text.
+  */
+
+  function addTyping() {
+
+    const div =
+      document.createElement('div');
+
+    div.className =
+      'message bot typing';
+
+    for (let i = 0; i < 3; i += 1) {
+      div.appendChild(
+        document.createElement('span')
+      );
+    }
+
+    messages.appendChild(div);
+
+    messages.scrollTop =
+      messages.scrollHeight;
+
+    return div;
+  }
+
+  /*
   |--------------------------------------------------------------------------
   | Welcome message
   |--------------------------------------------------------------------------
@@ -126,10 +153,7 @@
     );
 
     const loading =
-      addMessage(
-        'Typing...',
-        'bot'
-      );
+      addTyping();
 
     try {
 

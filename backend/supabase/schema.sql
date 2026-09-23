@@ -224,3 +224,18 @@ language sql stable as $$
   order by ds.embedding <=> query_embedding
   limit match_count;
 $$;
+
+-- ============================================================
+-- Performance indexes for dashboard counters
+-- /api/org/me counts leads, documents and bookings per organization on
+-- every dashboard load; without these the counts degrade to sequential
+-- scans as the tables grow. Safe to re-run (IF NOT EXISTS).
+-- ============================================================
+create index if not exists leads_org_idx
+  on public.leads(organization_id);
+
+create index if not exists documents_org_idx
+  on public.documents(organization_id);
+
+create index if not exists bookings_org_idx
+  on public.bookings(organization_id);
