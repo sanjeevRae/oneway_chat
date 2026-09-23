@@ -83,31 +83,6 @@
       overflow: hidden;
     }
 
-    /* Red unread badge — shown when a message arrives
-       from the page (hero search) while chat is closed. */
-
-    #onewaybot-badge {
-      position: absolute;
-
-      top: 2px;
-      right: 2px;
-
-      width: 14px;
-      height: 14px;
-
-      border-radius: 50%;
-
-      background: #ef4444;
-
-      border: 2px solid #ffffff;
-
-      display: none;
-    }
-
-    #onewaybot-button.has-unread #onewaybot-badge {
-      display: block;
-    }
-
     #onewaybot-button img {
       width: 100%;
       height: 100%;
@@ -474,13 +449,6 @@
     'aria-label',
     'Open chat'
   );
-
-  const badge =
-    document.createElement('span');
-
-  badge.id = 'onewaybot-badge';
-
-  button.appendChild(badge);
 
   const logo = document.createElement('img');
 
@@ -969,10 +937,6 @@
 
     chat.style.display = 'flex';
 
-    unread = 0;
-
-    button.classList.remove('has-unread');
-
     if (
       !messages.dataset.welcome
     ) {
@@ -1135,23 +1099,21 @@
      an 'onewaybot:flush' event; this drains the
      queue at boot and on every flush afterwards.
 
-     While the chat window is closed, each handed-
-     over message shows on the bubble as a red
-     unread dot and plays a short ding.
+     On a handed-over message the widget plays a
+     short chime and opens the chat window so
+     the user sees the question land live.
   ========================= */
 
-  let unread = 0;
+  /*
+    Two-tone notification chime (E6 -> G6 sine
+    notes with a soft attack/decay envelope).
+    Synthesized with Web Audio, so there is no
+    audio file to download and nothing to
+    autoplay-block beyond the user gesture that
+    triggered it.
+  */
 
-  function markUnread() {
-
-    unread += 1;
-
-    button.classList.add('has-unread');
-
-    playDing();
-  }
-
-  function playDing() {
+  function playChime() {
 
     try {
 
@@ -1169,50 +1131,71 @@
         ctx.resume();
       }
 
-      const osc =
-        ctx.createOscillator();
+      function note(
+        frequency,
+        startAt,
+        duration,
+        peak
+      ) {
 
-      const gain =
-        ctx.createGain();
+        const osc =
+          ctx.createOscillator();
 
-      osc.type = 'sine';
+        const gain =
+          ctx.createGain();
 
-      osc.frequency.setValueAtTime(
-        880,
-        ctx.currentTime
+        osc.type = 'sine';
+
+        osc.frequency.setValueAtTime(
+          frequency,
+          startAt
+        );
+
+        gain.gain.setValueAtTime(
+          0.0001,
+          startAt
+        );
+
+        gain.gain.exponentialRampToValueAtTime(
+          peak,
+          startAt + 0.025
+        );
+
+        gain.gain.exponentialRampToValueAtTime(
+          0.0001,
+          startAt + duration
+        );
+
+        osc.connect(gain);
+
+        gain.connect(ctx.destination);
+
+        osc.start(startAt);
+
+        osc.stop(startAt + duration + 0.05);
+      }
+
+      /*
+        E6 then G6, the second note a
+        little louder and longer — a
+        friendly "doorbell" feel.
+      */
+
+      note(1318.5, ctx.currentTime, 0.28, 0.14);
+
+      note(
+        1568,
+        ctx.currentTime + 0.13,
+        0.4,
+        0.18
       );
 
-      osc.frequency.exponentialRampToValueAtTime(
-        1320,
-        ctx.currentTime + 0.12
-      );
+      const longest =
+        ctx.currentTime + 0.13 + 0.4 + 0.05;
 
-      gain.gain.setValueAtTime(
-        0.0001,
-        ctx.currentTime
-      );
-
-      gain.gain.exponentialRampToValueAtTime(
-        0.18,
-        ctx.currentTime + 0.02
-      );
-
-      gain.gain.exponentialRampToValueAtTime(
-        0.0001,
-        ctx.currentTime + 0.45
-      );
-
-      osc.connect(gain);
-
-      gain.connect(ctx.destination);
-
-      osc.start();
-
-      osc.stop(ctx.currentTime + 0.5);
-
-      osc.onended = function () {
+      setTimeout(function () {
         ctx.close();
-      };
+      }, 800);
 
     } catch {
       // Sound is best-effort only.
@@ -1230,30 +1213,18 @@
 
     window.__onewayBotPending = [];
 
-    const wasOpen =
-      chat.style.display === 'flex';
+    /*
+      Chime + open the chat immediately, so the user
+      hears and sees their question land in the
+      conversation (openChat also adds the welcome
+      message if the chat was never opened).
+    */
+
+    playChime();
+
+    openChat();
 
     for (const text of queue) {
-
-      /*
-        Make sure the conversation has its
-        welcome message before the handed-
-        over question appears.
-      */
-
-      if (!messages.dataset.welcome) {
-
-        messages.dataset.welcome = '1';
-
-        addMessage(
-          welcomeMessage,
-          'bot'
-        );
-      }
-
-      if (!wasOpen) {
-        markUnread();
-      }
 
       await sendUserMessage(text);
     }

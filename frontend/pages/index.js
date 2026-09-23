@@ -163,9 +163,7 @@ function Hero() {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
-  const [toast, setToast] = useState('');
   const inputRef = useRef(null);
-  const toastTimer = useRef(null);
 
   const suggestions = filterHeroSuggestions(query);
 
@@ -189,10 +187,6 @@ function Hero() {
     setActive(-1);
     setOpen(false);
     inputRef.current?.blur();
-
-    setToast(text);
-    clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast(''), 5000);
   }
 
   function handleAskKeyDown(event) {
@@ -263,13 +257,6 @@ function Hero() {
                 onFocus={() => setOpen(true)}
                 onKeyDown={handleAskKeyDown}
               />
-              <button
-                type="submit"
-                aria-label="Ask the bot"
-                className="flex h-8 shrink-0 items-center rounded-full bg-brand-600 px-4 text-xs font-semibold text-white transition-colors hover:bg-brand-700"
-              >
-                Ask
-              </button>
             </form>
 
             {/* Suggestion panel */}
@@ -304,23 +291,6 @@ function Hero() {
               </ul>
             )}
           </div>
-
-          {/* Confirmation toast — reassures the user their question went to the chat bubble */}
-          {toast && (
-            <p
-              className="mt-3 flex max-w-md items-center gap-2 rounded-xl bg-brand-50 px-4 py-2.5 text-[13px] text-ink-700"
-              role="status"
-            >
-              <span className="relative flex h-2.5 w-2.5 shrink-0">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-500 opacity-60"></span>
-                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-brand-600"></span>
-              </span>
-              <span>
-                Sent to the chat — open the bubble (bottom-right) to see the reply
-                <span className="block text-xs text-ink-400">“{toast}”</span>
-              </span>
-            </p>
-          )}
         </div>
 
         {/* Right — hero illustration, bleeds to the screen edge on desktop */}
