@@ -16,6 +16,7 @@ const NotionIcon = () => (<Icon><rect width="18" height="18" x="3" y="3" rx="2" 
 export default function Train() {
   const [docs, setDocs] = useState([]);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
   const [text, setText] = useState({ title: '', body: '' });
   const fileRef = useRef(null);
@@ -32,9 +33,12 @@ export default function Train() {
 
   async function crawl(e) {
     e.preventDefault();
-    setBusy(true); setError('');
+    setBusy('crawl'); setError(''); setNotice('');
     try {
-      await api('/api/knowledge/crawl', { method: 'POST', body: JSON.stringify({ url: e.target.url.value }) });
+      const data = await api('/api/knowledge/crawl', { method: 'POST', body: JSON.stringify({ url: e.target.url.value }) });
+      const pages = data.pages || 1;
+      const chars = data.chars ? ` (~${Math.round(data.chars / 1000)}k characters)` : '';
+      setNotice(`Learned ${pages} page${pages === 1 ? '' : 's'} from that site${chars} — your bot can answer from them now.`);
       e.target.reset();
       load();
     } catch (err) { setError(err.message); }
@@ -43,7 +47,7 @@ export default function Train() {
 
   async function addText(e) {
     e.preventDefault();
-    setBusy(true); setError('');
+    setBusy('text'); setError(''); setNotice('');
     try {
       // Backend expects { title, text }
       await api('/api/knowledge/text', { method: 'POST', body: JSON.stringify({ title: text.title, text: text.body }) });
@@ -56,7 +60,7 @@ export default function Train() {
   async function upload() {
     const file = fileRef.current?.files?.[0];
     if (!file) return;
-    setBusy(true); setError('');
+    setBusy('upload'); setError(''); setNotice('');
     try {
       const fd = new FormData();
       fd.append('file', file);
@@ -86,7 +90,7 @@ export default function Train() {
 
   async function importUrl(e) {
     e.preventDefault();
-    setBusy(true); setError('');
+    setBusy('import'); setError(''); setNotice('');
     const kind = new FormData(e.target).get('kind');
     try {
       await api(`/api/knowledge/${kind}`, { method: 'POST', body: JSON.stringify({ url: e.target.url.value }) });
@@ -112,6 +116,9 @@ export default function Train() {
       {error && (
         <div className="mb-6 rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>
       )}
+      {notice && (
+        <div className="mb-6 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{notice}</div>
+      )}
 
       {/* Add sources */}
       <div className="mb-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -119,10 +126,10 @@ export default function Train() {
         <form onSubmit={crawl} className="card flex flex-col p-5 transition-colors duration-150 hover:border-gray-300">
           <div className="mb-3.5 flex h-9 w-9 items-center justify-center rounded-lg border border-brand-100 bg-brand-50"><GlobeIcon /></div>
           <h3 className="mb-0.5 text-sm font-semibold text-ink-900">Website</h3>
-          <p className="mb-4 text-xs leading-relaxed text-ink-500">Crawl a page and learn its content.</p>
+          <p className="mb-4 text-xs leading-relaxed text-ink-500">Crawl a website — learns its key pages, sitemap &amp; FAQs automatically.</p>
           <div className="mt-auto space-y-2.5">
             <input name="url" required placeholder="https://yoursite.com" className={`${inputCls} !py-2 text-[13px]`} />
-            <button disabled={busy} className="btn-primary w-full !py-2 text-xs">Crawl &amp; learn</button>
+            <button disabled={busy} className="btn-primary w-full !py-2 text-xs">{busy === 'crawl' ? 'Crawling site…' : 'Crawl & learn'}</button>
           </div>
         </form>
 
@@ -133,7 +140,7 @@ export default function Train() {
           <p className="mb-4 text-xs leading-relaxed text-ink-500">PDF, TXT, MD or CSV (max 5MB).</p>
           <div className="mt-auto space-y-2.5">
             <input ref={fileRef} type="file" accept=".pdf,.txt,.md,.csv" className="w-full text-xs text-ink-500 file:mr-3 file:cursor-pointer file:rounded-md file:border file:border-gray-300 file:bg-white file:px-2.5 file:py-1.5 file:text-xs file:font-medium file:text-ink-700 hover:file:bg-gray-50" />
-            <button onClick={upload} disabled={busy} className="btn-primary w-full !py-2 text-xs">Upload &amp; learn</button>
+            <button onClick={upload} disabled={busy} className="btn-primary w-full !py-2 text-xs">{busy === 'upload' ? 'Uploading…' : 'Upload & learn'}</button>
           </div>
         </div>
 
@@ -147,7 +154,7 @@ export default function Train() {
               className={`${inputCls} !py-2 text-[13px]`} />
             <textarea rows={3} placeholder="Paste FAQs or info…" value={text.body}
               onChange={(e) => setText({ ...text, body: e.target.value })} className={`${inputCls} resize-none !py-2 text-[13px]`} />
-            <button disabled={busy || !text.body} className="btn-primary w-full !py-2 text-xs">Save &amp; learn</button>
+            <button disabled={busy || !text.body} className="btn-primary w-full !py-2 text-xs">{busy === 'text' ? 'Saving…' : 'Save & learn'}</button>
           </div>
         </form>
       </div>

@@ -8,32 +8,44 @@ const config = require('../config');
 
 async function embedBatch(texts) {
   const token = config.embeddings.hfToken;
-  if (token) {
-    try {
-      // New HF Inference router endpoint (api-inference.huggingface.co is deprecated)
-      const res = await fetch(
-        `https://router.huggingface.co/hf-inference/models/${config.embeddings.hfModel}/pipeline/feature-extraction`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ inputs: texts, options: { wait_for_model: true } }),
-          signal: AbortSignal.timeout(30000),
+  if (!token) return texts.map(localEmbed);
+
+  // Split into small batches and run them in parallel: a big site crawl can
+  // produce 40–60 chunks, and one giant request is slow and more likely to
+  // time out. A failed batch falls back locally without sinking the rest.
+  const BATCH = 24;
+  const batches = [];
+  for (let i = 0; i < texts.length; i += BATCH) batches.push(texts.slice(i, i + BATCH));
+
+  const settled = await Promise.all(
+    batches.map(async (batch) => {
+      try {
+        const res = await fetch(
+          `https://router.huggingface.co/hf-inference/models/${config.embeddings.hfModel}/pipeline/feature-extraction`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ inputs: batch, options: { wait_for_model: true } }),
+            signal: AbortSignal.timeout(30000),
+          }
+        );
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && Array.isArray(data[0]) && data.length === batch.length) {
+            return data;
+          }
         }
-      );
-      if (res.ok) {
-        const data = await res.json();
-        if (Array.isArray(data) && Array.isArray(data[0])) return data;
-      } else {
-        console.warn(`HF embedding failed (${res.status}), using local fallback`);
+        console.warn(`HF embedding failed (${res.status}), using local fallback for batch`);
+      } catch (e) {
+        console.warn('HF embedding error, using local fallback for batch:', e.message);
       }
-    } catch (e) {
-      console.warn('HF embedding error, using local fallback:', e.message);
-    }
-  }
-  return texts.map(localEmbed);
+      return batch.map(localEmbed);
+    })
+  );
+  return settled.flat();
 }
 
 /**

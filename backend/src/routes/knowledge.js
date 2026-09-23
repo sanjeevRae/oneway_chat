@@ -1,8 +1,8 @@
 const express = require('express');
 const supabaseAdmin = require('../lib/supabase');
 const { requireAuth } = require('../middleware/auth');
-const { ingestDocument, deleteDocument } = require('../services/rag');
-const { crawlUrl } = require('../services/ingest');
+const { ingestDocument, deleteDocument, trackUsage } = require('../services/rag');
+const { crawlSite } = require('../services/crawler');
 const { importGoogleDrive, importNotion } = require('../services/imports');
 
 const router = express.Router();
@@ -20,7 +20,7 @@ router.get('/', async (req, res) => {
   res.json({ documents: data || [] });
 });
 
-/** POST /api/knowledge/crawl — crawl a website URL */
+/** POST /api/knowledge/crawl — crawl a website (sitemap + links) and learn it */
 router.post('/crawl', async (req, res) => {
   try {
     const { url, title } = req.body;
@@ -28,20 +28,30 @@ router.post('/crawl', async (req, res) => {
 
     let normalized = url.trim();
     if (!/^https?:\/\//i.test(normalized)) normalized = `https://${normalized}`;
+    let parsed;
+    try { parsed = new URL(normalized); } catch {
+      return res.status(400).json({ error: 'Invalid URL' });
+    }
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return res.status(400).json({ error: 'Only http(s) URLs can be crawled' });
+    }
+    normalized = parsed.href;
 
-    const text = await crawlUrl(normalized);
-    if (!text || text.length < 50) {
-      return res.status(400).json({ error: 'Could not extract meaningful content from that URL' });
+    const crawl = await crawlSite(normalized);
+    if (!crawl.text || crawl.text.length < 50) {
+      return res.status(400).json({ error: 'Found the site but no readable content on its pages. Try pasting content instead.' });
     }
 
     const result = await ingestDocument({
       organizationId: req.orgId,
-      title: title || new URL(normalized).hostname,
+      title: title || parsed.hostname,
       sourceType: 'crawl',
       url: normalized,
-      text,
+      text: crawl.text,
     });
-    res.json({ ok: true, ...result });
+
+    trackUsage(req.orgId, 'crawl', crawl.pages).catch(() => {});
+    res.json({ ok: true, pages: crawl.pages, chars: crawl.text.length, ...result });
   } catch (err) {
     res.status(err.status || 500).json({ error: err.message });
   }
