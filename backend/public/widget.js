@@ -453,7 +453,7 @@
   const logo = document.createElement('img');
 
   logo.src =
-    'https://onewaynepal.com/chat-api/logo.webp';
+    'https://test.onewaynepal.com/chat-api/logo.webp';
 
   logo.alt = 'OneWay Bot';
 

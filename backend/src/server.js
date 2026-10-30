@@ -9,7 +9,7 @@ const { apiLimiter, chatLimiter } = require('./middleware/rateLimit');
 const { verifyTurnstile } = require('./middleware/turnstile');
 
 const app = express();
-
+app.set('trust proxy', 'loopback');
 /*
 |--------------------------------------------------------------------------
 | Passenger /chat-api prefix handling
@@ -44,6 +44,22 @@ app.use((req, res, next) => {
 */
 
 app.use(helmet());
+
+// Permit the public widget loader to be embedded on customer websites.
+// Keep Helmet's default security policy for all other routes.
+app.use((req, res, next) => {
+  if (
+    req.path === '/widget.js' ||
+    req.path === '/logo.webp'
+  ) {
+    res.setHeader(
+      'Cross-Origin-Resource-Policy',
+      'cross-origin'
+    );
+  }
+
+  next();
+});
 
 /*
 |--------------------------------------------------------------------------
