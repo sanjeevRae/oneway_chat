@@ -20,6 +20,48 @@ router.get('/', async (req, res) => {
   res.json({ documents: data || [] });
 });
 
+/** GET /api/knowledge/status — diagnostic: KB health for the current org */
+router.get('/status', async (req, res) => {
+  try {
+    const { data: docs, error: docsErr } = await supabaseAdmin
+      .from('documents')
+      .select('id, title, source_type, status')
+      .eq('organization_id', req.orgId);
+
+    if (docsErr) throw docsErr;
+
+    const ready = docs.filter((d) => d.status === 'ready').length;
+    const processing = docs.filter((d) => d.status === 'processing').length;
+    const failed = docs.filter((d) => d.status === 'failed').length;
+
+    // Check if the version column exists (quick probe)
+    const { error: versionErr } = await supabaseAdmin
+      .from('organizations')
+      .select('version')
+      .eq('id', req.orgId)
+      .single();
+
+    const versionColumnMissing = versionErr && /version|column/i.test(versionErr.message || '');
+
+    res.json({
+      organizationId: req.orgId,
+      totalDocuments: docs.length,
+      ready,
+      processing,
+      failed,
+      versionColumnMissing,
+      kbEmpty: ready === 0,
+      hint: versionColumnMissing
+        ? 'Run the version-column migration in Supabase SQL Editor (see backend console for exact SQL).'
+        : ready === 0
+          ? 'No ready documents. Upload a file or crawl a website to build your knowledge base.'
+          : 'Knowledge base looks healthy.',
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 /** POST /api/knowledge/crawl — crawl a website (sitemap + links) and learn it */
 router.post('/crawl', async (req, res) => {
   try {
@@ -96,7 +138,7 @@ router.post('/text', async (req, res) => {
   }
 });
 
-/** POST /api/knowledge/upload — file upload (txt/md/pdf) */
+/** POST /api/knowledge/upload — file upload (txt/md/pdf/csv) */
 router.post('/upload', async (req, res) => {
   try {
     if (!req.files || !req.files.file) {
@@ -108,13 +150,51 @@ router.post('/upload', async (req, res) => {
       return res.status(400).json({ error: 'File too large (max 5MB on free plan)' });
     }
 
+    const name = file.name.toLowerCase();
+    const mime = (file.mimetype || '').toLowerCase();
+
+    const isPdf =
+      name.endsWith('.pdf')
+      || mime === 'application/pdf'
+      || mime === 'application/x-pdf'
+      || mime === 'application/x-bzpdf'
+      || mime === 'application/x-gzpdf'
+      || mime === 'application/octet-stream' && name.endsWith('.pdf');
+
+    const isText =
+      name.endsWith('.txt')
+      || mime === 'text/plain'
+      || mime.startsWith('text/');
+
+    const isMarkdown =
+      name.endsWith('.md')
+      || mime === 'text/markdown'
+      || mime === 'text/x-markdown';
+
+    const isCsv =
+      name.endsWith('.csv')
+      || mime === 'text/csv'
+      || mime === 'application/csv';
+
     let text = '';
-    if (file.mimetype === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
-      const pdfParse = require('pdf-parse');
-      const pdf = await pdfParse(file.data);
-      text = pdf.text;
-    } else if (/^text\/|json|markdown|csv/.test(file.mimetype) || /\.(txt|md|csv|json)$/i.test(file.name)) {
-      text = file.data.toString('utf8');
+
+    if (isPdf) {
+      try {
+        const pdfParse = require('pdf-parse');
+        const pdf = await pdfParse(file.data);
+        text = pdf.text || '';
+      } catch (err) {
+        return res.status(400).json({
+          error: 'Could not read PDF. Make sure it is not password-protected or corrupted.',
+        });
+      }
+    } else if (isText || isMarkdown || isCsv) {
+      let raw = file.data;
+      // Strip UTF-8 BOM if present so it doesn't corrupt extracted text
+      if (raw[0] === 0xEF && raw[1] === 0xBB && raw[2] === 0xBF) {
+        raw = raw.slice(3);
+      }
+      text = raw.toString('utf8');
     } else {
       return res.status(400).json({ error: 'Unsupported file type. Use PDF, TXT, MD or CSV.' });
     }
@@ -131,6 +211,7 @@ router.post('/upload', async (req, res) => {
     });
     res.json({ ok: true, ...result });
   } catch (err) {
+    console.error('[Upload] error:', err.message);
     res.status(err.status || 500).json({ error: err.message });
   }
 });

@@ -186,6 +186,8 @@ router.post('/', async (req, res) => {
     const org = orgRes.data;
     if (orgRes.error || !org) return res.status(404).json({ error: 'Business not found' });
 
+    console.log(`[Chat] org=${orgId} query="${message}" chunks=${contextChunks.length} orgName=${org.name}`);
+
     const settings = settingsRes.data;
 
     // ---- Free-tier quota check (messages/month) ----
@@ -349,6 +351,7 @@ router.post('/', async (req, res) => {
       provider: result.provider,
     });
 
+    console.log(`[Chat] Response: ${result.reply.substring(0, 200)}...`);
     persistTurn({ orgId, sessionId, channel, userMessage: message, assistantMessage: result.reply });
   } catch (err) {
     console.error('Chat route error:', err);
@@ -380,6 +383,57 @@ router.get('/config/:orgId', async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ error: 'Failed to load bot config' });
+  }
+});
+
+/** POST /api/chat/clear-cache — clear the in-memory answer cache (dev/debug) */
+router.post('/clear-cache', (req, res) => {
+  const size = answerCache.size;
+  answerCache.clear();
+  res.json({ ok: true, cleared: size });
+});
+
+/** GET /api/chat/debug/:orgId — diagnostic: check retrieval pipeline (no auth required for dev) */
+router.get('/debug/:orgId', async (req, res) => {
+  try {
+    const { orgId } = req.params;
+    const testQuery = req.query.q || 'services';
+
+    // Check org exists
+    const { data: org, error: orgErr } = await supabaseAdmin
+      .from('organizations')
+      .select('id, name, version')
+      .eq('id', orgId)
+      .single();
+
+    // Check documents
+    const { data: docs, error: docsErr } = await supabaseAdmin
+      .from('documents')
+      .select('id, title, source_type, status')
+      .eq('organization_id', orgId);
+
+    // Check document_sections count
+    const { count: sectionCount, error: secErr } = await supabaseAdmin
+      .from('document_sections')
+      .select('id', { count: 'exact', head: true })
+      .eq('organization_id', orgId);
+
+    // Try retrieval
+    const { retrieveContext } = require('../services/rag');
+    const chunks = await retrieveContext(orgId, testQuery);
+
+    res.json({
+      org: org || orgErr?.message,
+      documents: docs || docsErr?.message,
+      sectionCount: sectionCount ?? secErr?.message,
+      retrievalTest: {
+        query: testQuery,
+        chunksFound: chunks.length,
+        chunks: chunks.map((c) => ({ id: c.id, content: (c.content || '').slice(0, 100) })),
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 

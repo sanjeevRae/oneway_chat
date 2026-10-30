@@ -48,7 +48,7 @@ function groqRequest(messages, tools, stream) {
     getGroq().chat.completions.create({
       model: config.groq.model,
       messages,
-      temperature: 0.4,
+      temperature: 0.2,
       max_tokens: 600,
       ...(tools && tools.length ? { tools, tool_choice: 'auto' } : {}),
       ...(stream ? { stream: true } : {}),
@@ -80,7 +80,7 @@ async function callChatCompletion(messages, tools, stream) {
           body: JSON.stringify({
             model: config.openrouter.model,
             messages,
-            temperature: 0.4,
+            temperature: 0.2,
             max_tokens: 600,
             ...(tools && tools.length ? { tools, tool_choice: 'auto' } : {}),
           }),
@@ -132,9 +132,9 @@ async function callChatCompletion(messages, tools, stream) {
  */
 function buildSystemPrompt(org, settings, contextChunks, channel = 'web') {
   const context = contextChunks.length
-    ? `\n\nRelevant knowledge about this business (use it to answer; if unsure, say you don't know):\n${contextChunks
-        .map((c, i) => `[${i + 1}] ${c.content}`)
-        .join('\n\n')}`
+    ? `\n\nRelevant knowledge about this business (use ONLY the relevant parts to answer; if unsure, say you don't know):\n${contextChunks
+        .map((c, i) => `[Source ${i + 1}] ${c.content}`)
+        .join('\n---\n')}`
     : '';
 
   // Messaging apps render plain text only — no markdown tables/bold/headers.
@@ -151,7 +151,16 @@ function buildSystemPrompt(org, settings, contextChunks, channel = 'web') {
 
 Rules:
 - Answer questions about this business using ONLY the provided knowledge. If the answer isn't in the knowledge, say so honestly and offer to take their contact info.
+- CRITICAL: Use EXACT words from the provided knowledge. Do not change, paraphrase, alter, or misspell any names, places, brands, or proper nouns. If the knowledge says "Nepal", you must say "Nepal" — never "Nebal" or any other variation.
 - Be concise, warm and helpful. Match the customer's language.
+- For greetings (hi, hello, hey, etc.), just greet back warmly. Do NOT dump business info unless asked.
+- Only provide information that is directly relevant to the user's question. Do not volunteer extra details.
+- When listing services or features, keep it to 3-5 items max. Offer to provide more details if needed.
+- Do not repeat information the user already knows or that you already shared.
+- If multiple pieces of information are in the knowledge, only use the ones relevant to the question.
+- Never mix or combine information from different topics. Answer only what was asked.
+- If you are not sure about something, say "I'm not sure" instead of guessing.
+- Copy names, addresses, phone numbers, and URLs EXACTLY as they appear in the knowledge. Do not modify them in any way.
 ${formatRule}
 - You can book appointments/reservations using your tools. Always confirm details (date, time, party size / service) before calling create_booking.
 - If a visitor shares their name + email/phone without asking to book, save them as a lead with create_lead.
@@ -291,7 +300,7 @@ async function streamChatCompletion(messages, tools) {
       getGroq().chat.completions.create({
         model: config.groq.model,
         messages,
-        temperature: 0.4,
+        temperature: 0.2,
         max_tokens: 600,
         stream: true,
         ...(tools && tools.length ? { tools, tool_choice: 'auto' } : {}),
@@ -318,7 +327,7 @@ async function streamChatCompletion(messages, tools) {
           body: JSON.stringify({
             model: config.openrouter.model,
             messages,
-            temperature: 0.4,
+            temperature: 0.2,
             max_tokens: 600,
             stream: true,
             ...(tools && tools.length ? { tools, tool_choice: 'auto' } : {}),

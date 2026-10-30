@@ -1,20 +1,67 @@
 const config = require('../config');
 
 /**
- * Chunk text into overlapping windows (~word-based approximation of tokens).
+ * Chunk text into semantically coherent windows.
+ * Uses sentence-boundary aware chunking with overlap for better RAG quality.
  */
 function chunkText(text, chunkSize = config.rag.chunkSize, overlap = config.rag.chunkOverlap) {
-  const words = text.replace(/\s+/g, ' ').trim().split(' ');
-  const chunks = [];
-  let start = 0;
+  if (!text || text.trim().length === 0) return [];
 
-  while (start < words.length) {
-    const chunkWords = words.slice(start, start + chunkSize);
-    if (chunkWords.length === 0) break;
-    chunks.push(chunkWords.join(' '));
-    start += chunkSize - overlap;
+  // Normalize whitespace
+  const normalized = text.replace(/\s+/g, ' ').trim();
+
+  // Split into sentences (handle common abbreviations and punctuation)
+  const sentences = normalized
+    .split(/(?<=[.!?])\s+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+
+  if (sentences.length === 0) return [];
+
+  const chunks = [];
+  let currentChunk = [];
+  let currentWordCount = 0;
+
+  for (const sentence of sentences) {
+    const sentenceWords = sentence.split(/\s+/).length;
+
+    // If adding this sentence would exceed chunk size, finalize current chunk
+    if (currentWordCount + sentenceWords > chunkSize && currentChunk.length > 0) {
+      const chunk = currentChunk.join(' ');
+      if (chunk.length > 20) chunks.push(chunk);
+
+      // Overlap: keep last few sentences for context continuity
+      const overlapWords = Math.min(overlap, Math.floor(currentWordCount * 0.3));
+      let overlapCount = 0;
+      const overlapSentences = [];
+      for (let i = currentChunk.length - 1; i >= 0; i--) {
+        const w = currentChunk[i].split(/\s+/).length;
+        if (overlapCount + w > overlapWords) break;
+        overlapCount += w;
+        overlapSentences.unshift(currentChunk[i]);
+      }
+      currentChunk = overlapSentences;
+      currentWordCount = overlapCount;
+    }
+
+    currentChunk.push(sentence);
+    currentWordCount += sentenceWords;
   }
-  return chunks.filter((c) => c.length > 20);
+
+  // Finalize last chunk
+  if (currentChunk.length > 0) {
+    const chunk = currentChunk.join(' ');
+    if (chunk.length > 20) chunks.push(chunk);
+  }
+
+  // Deduplicate near-identical chunks
+  const seen = new Set();
+  return chunks.filter((c) => {
+    const key = c.toLowerCase().replace(/\s+/g, ' ').slice(0, 80);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 /**

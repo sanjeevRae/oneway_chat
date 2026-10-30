@@ -18,6 +18,7 @@ const dns = require('dns').promises;
 const { JSDOM } = require('jsdom');
 const { Readability } = require('@mozilla/readability');
 const iconv = require('iconv-lite');
+const config = require('../config');
 
 const UA = 'OneWayChatAI-Bot/1.0 (+https://onewaychat.ai)';
 
@@ -25,15 +26,20 @@ const UA = 'OneWayChatAI-Bot/1.0 (+https://onewaychat.ai)';
 const BROWSER_UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
-const MAX_PAGES = 40;                 // pages learned per crawl (VPS-powered)
-const CONCURRENCY = 10;               // parallel fetch+extract workers
-const PER_PAGE_TIMEOUT_MS = 6000;     // per fetch (applies to each redirect hop)
-const DISCOVER_DEADLINE_MS = 12000;   // stop pulling new URLs after this
-const AUX_TIMEOUT_MS = 4000;          // robots.txt / sitemap fetches
-const MAX_REDIRECTS = 5;
-const MAX_HTML_BYTES = 2.5 * 1024 * 1024;
-const MAX_PAGE_CHARS = 18000;         // per-page content cap
-const MAX_TOTAL_CHARS = 300000;       // whole-crawl content cap
+// All crawler settings come from config (env-overridable) — no hard-coded values.
+const C = config.crawler;
+const MAX_PAGES = C.maxPages;
+const CONCURRENCY = C.concurrency;
+const PER_PAGE_TIMEOUT_MS = C.perPageTimeoutMs;
+const DISCOVER_DEADLINE_MS = C.discoverDeadlineMs;
+const AUX_TIMEOUT_MS = C.auxTimeoutMs;
+const MAX_REDIRECTS = C.maxRedirects;
+const MAX_HTML_BYTES = C.maxHtmlBytes;
+const MAX_PAGE_CHARS = C.maxPageChars;
+const MAX_TOTAL_CHARS = C.maxTotalChars;
+const MIN_PAGE_CHARS = C.minPageChars;
+const MAX_RETRIES = C.maxRetries;
+const RETRY_BASE_DELAY_MS = C.retryBaseDelayMs;
 
 // Paths / extensions that are never content pages
 const BLOCKED_EXT = /\.(pdf|jpe?g|png|gif|svg|webp|avif|ico|zip|gz|mp3|mp4|webm|mov|avi|docx?|xlsx?|pptx?|csv|xml|json|rss|atom|txt|woff2?|ttf|eot|css)$/i;
@@ -100,76 +106,86 @@ function assertPublicUrl(urlStr, cache) {
  * Fetch with SSRF validation on every hop (redirects handled manually so
  * a public host cannot bounce us into 127.0.0.1 or 169.254.169.254).
  */
-async function fetchGuarded(url, timeoutMs, hostCache) {
-  let current = url;
-  let browserRetry = false;
-  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-    await assertPublicUrl(current, hostCache);
-    const browserish = browserRetry;
-    let res = await fetch(current, {
-      headers: browserish
-        ? {
-            'user-agent': BROWSER_UA,
-            accept:
-              'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-            'accept-language': 'en-US,en;q=0.9',
-            'accept-encoding': 'gzip, deflate, br',
-            'sec-ch-ua': '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
-            'sec-ch-ua-mobile': '?0',
-            'sec-ch-ua-platform': '"Windows"',
-            'sec-fetch-dest': 'document',
-            'sec-fetch-mode': 'navigate',
-            'sec-fetch-site': 'none',
-            'upgrade-insecure-requests': '1',
-          }
-        : {
-            'user-agent': UA,
-            accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            'accept-language': 'en',
-          },
-      redirect: 'manual',
-      signal: AbortSignal.timeout(timeoutMs),
-    });
+async function fetchGuarded(url, timeoutMs, hostCache, retries = MAX_RETRIES) {
+  let lastErr;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      let current = url;
+      let browserRetry = false;
+      for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+        await assertPublicUrl(current, hostCache);
+        const browserish = browserRetry;
+        let res = await fetch(current, {
+          headers: browserish
+            ? {
+                'user-agent': BROWSER_UA,
+                accept:
+                  'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+                'accept-language': 'en-US,en;q=0.9',
+                'accept-encoding': 'gzip, deflate, br',
+                'sec-ch-ua': '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+                'sec-ch-ua-mobile': '?0',
+                'sec-ch-ua-platform': '"Windows"',
+                'sec-fetch-dest': 'document',
+                'sec-fetch-mode': 'navigate',
+                'sec-fetch-site': 'none',
+                'upgrade-insecure-requests': '1',
+              }
+            : {
+                'user-agent': UA,
+                accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'accept-language': 'en',
+              },
+          redirect: 'manual',
+          signal: AbortSignal.timeout(timeoutMs),
+        });
 
-    /*
-      Cloudflare/WAF bot-challenge: sites that 401/403/429/999 the bot UA
-      often accept a browser-shaped request. Retry ONCE per hop with real
-      browser headers before giving up on the page.
-    */
-    if (
-      !browserRetry &&
-      [401, 403, 429, 999].includes(res.status) &&
-      res.headers.get('cf-ray')
-    ) {
-      browserRetry = true;
-      res = await fetch(current, {
-        headers: {
-          'user-agent': BROWSER_UA,
-          accept:
-            'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-          'accept-language': 'en-US,en;q=0.9',
-          'sec-ch-ua': '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
-          'sec-ch-ua-mobile': '?0',
-          'sec-ch-ua-platform': '"Windows"',
-          'sec-fetch-dest': 'document',
-          'sec-fetch-mode': 'navigate',
-          'sec-fetch-site': 'none',
-          'upgrade-insecure-requests': '1',
-        },
-        redirect: 'manual',
-        signal: AbortSignal.timeout(timeoutMs),
-      });
-    }
+        if (
+          !browserRetry &&
+          [401, 403, 429, 999].includes(res.status)
+        ) {
+          browserRetry = true;
+          res = await fetch(current, {
+            headers: {
+              'user-agent': BROWSER_UA,
+              accept:
+                'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+              'accept-language': 'en-US,en;q=0.9',
+              'accept-encoding': 'gzip, deflate, br',
+              'sec-ch-ua': '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+              'sec-ch-ua-mobile': '?0',
+              'sec-ch-ua-platform': '"Windows"',
+              'sec-fetch-dest': 'document',
+              'sec-fetch-mode': 'navigate',
+              'sec-fetch-site': 'none',
+              'upgrade-insecure-requests': '1',
+            },
+            redirect: 'manual',
+            signal: AbortSignal.timeout(timeoutMs),
+          });
+        }
 
-    if ([301, 302, 303, 307, 308].includes(res.status)) {
-      const loc = res.headers.get('location');
-      if (!loc) throw new Error(`Redirect without location from ${current}`);
-      current = new URL(loc, current).href;
-      continue;
+        if ([301, 302, 303, 307, 308].includes(res.status)) {
+          const loc = res.headers.get('location');
+          if (!loc) throw new Error(`Redirect without location from ${current}`);
+          current = new URL(loc, current).href;
+          continue;
+        }
+        return { res, finalUrl: current };
+      }
+      throw new Error(`Too many redirects for ${url}`);
+    } catch (err) {
+      lastErr = err;
+      // Don't retry SSRF/invalid URL errors — those are permanent.
+      if (attempt < retries && !/Blocked|SSRF|private|invalid/i.test(err.message || '')) {
+        const delay = RETRY_BASE_DELAY_MS * Math.pow(2, attempt);
+        await new Promise((r) => setTimeout(r, delay));
+        continue;
+      }
+      throw err;
     }
-    return { res, finalUrl: current };
   }
-  throw new Error(`Too many redirects for ${url}`);
+  throw lastErr;
 }
 
 
@@ -383,6 +399,29 @@ function extractPage(html, pageUrl) {
     try { dom.window.close(); } catch { /* noop */ }
   }
 
+  // If text is still thin/empty, try to build content from meta tags,
+  // structured data, and any remaining visible text on the page.
+  if (!text || text.trim().length < MIN_PAGE_CHARS) {
+    const fallbackParts = [];
+    if (desc) fallbackParts.push(desc);
+    if (ld) fallbackParts.push(ld);
+    // Try to grab any remaining text from the body
+    try {
+      const bodyText = normalizeText(doc?.body?.textContent || '');
+      if (bodyText.length >= MIN_PAGE_CHARS) fallbackParts.push(bodyText.slice(0, MAX_PAGE_CHARS));
+    } catch { /* noop */ }
+    // Try meta keywords
+    const keywords = doc?.querySelector?.('meta[name="keywords"]')?.getAttribute('content');
+    if (keywords) fallbackParts.push(`Keywords: ${keywords}`);
+    // Try Open Graph title/description
+    const ogTitle = doc?.querySelector?.('meta[property="og:title"]')?.getAttribute('content');
+    const ogDesc = doc?.querySelector?.('meta[property="og:description"]')?.getAttribute('content');
+    if (ogTitle) fallbackParts.push(`Title: ${ogTitle}`);
+    if (ogDesc && ogDesc !== desc) fallbackParts.push(ogDesc);
+    if (fallbackParts.length) text = fallbackParts.join('\n\n');
+  }
+
+  try { dom.window.close(); } catch { /* noop */ }
   return { title, desc, ld, links, text: normalizeText(text) };
 }
 
@@ -390,16 +429,10 @@ async function fetchAndExtract(url, hostCache) {
   const { res, finalUrl } = await fetchGuarded(url, PER_PAGE_TIMEOUT_MS, hostCache);
   if (!res.ok) return null;
   const ct = res.headers.get('content-type') || '';
-  if (ct && !/text\/html|application\/xhtml\+xml/i.test(ct)) return null;
+  if (ct && !/text\/html|application\/xhtml\+xml|text\/plain/i.test(ct)) return null;
   const len = parseInt(res.headers.get('content-length') || '0', 10);
   if (Number.isFinite(len) && len > MAX_HTML_BYTES) return null;
 
-  /*
-    Charset-correct decode: charset from the Content-Type header, else a
-    sniff of the raw bytes' meta tag, else UTF-8. Non-UTF-8 pages
-    (latin-1, Shift_JIS, GBK…) decode via iconv-lite instead of
-    producing mojibake that would poison the knowledge base.
-  */
   const headerCharset = (ct.match(/charset=([\w-]+)/i) || [])[1];
   const raw = Buffer.from(await res.arrayBuffer());
   let charset = headerCharset;
@@ -418,8 +451,7 @@ async function fetchAndExtract(url, hostCache) {
     html = raw.toString('utf8');
   }
   if (html.length > MAX_HTML_BYTES) html = html.slice(0, MAX_HTML_BYTES);
-  // Reject JSON/RSS 200s that aren't actually documents
-  if (!/<(?:!doctype|html|head|body|div|p|main|article)\b/i.test(html)) return null;
+  if (!/<(?:!doctype|html|head|body|div|p|main|article|h[1-6]|section|span|ul|ol|table)\b/i.test(html)) return null;
   return extractPage(html, finalUrl);
 }
 
@@ -556,7 +588,15 @@ async function crawlSite(rawUrl) {
     try { path = new URL(u).pathname; } catch { return; }
     if (isRobotsBlocked(path, robots.disallow)) return;
     queued.add(u);
-    queue.push(u);
+    // Prioritize important pages: shorter paths, fewer segments, and URLs
+    // containing high-value keywords come first (BFS with priority).
+    const segments = path.split('/').filter(Boolean).length;
+    const priority = /about|service|product|contact|faq|pricing|team|location|hour|menu|blog|news/i.test(path) ? 0 : segments > 2 ? 2 : 1;
+    if (priority === 0) {
+      queue.unshift(u); // high-priority: front of queue
+    } else {
+      queue.push(u); // normal/low: back of queue
+    }
   };
   pushUrl(seedUrl.href);
   for (const s of sitemapSeeds) pushUrl(s);
@@ -579,7 +619,7 @@ async function crawlSite(rawUrl) {
       visited.add(url);
       let page = null;
       try { page = await fetchAndExtract(url, hostCache); } catch { continue; }
-      if (!page || page.text.length < 60) continue; // 404 shell / thin page
+      if (!page || page.text.length < MIN_PAGE_CHARS) continue; // 404 shell / thin page
       const fingerprint = page.text.toLowerCase().replace(/\W+/g, '').slice(0, 200);
       if (fingerprint && seenContent.has(fingerprint)) continue; // alias pages
       if (pages.length >= MAX_PAGES) break;

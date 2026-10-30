@@ -51,6 +51,22 @@ const config = {
     chunkOverlap: 50,
     topK: 5,
   },
+
+  // Website crawler settings — all overridable via environment variables.
+  crawler: {
+    maxPages: parseInt(process.env.CRAWLER_MAX_PAGES || '100', 10),
+    concurrency: parseInt(process.env.CRAWLER_CONCURRENCY || '15', 10),
+    perPageTimeoutMs: parseInt(process.env.CRAWLER_PER_PAGE_TIMEOUT_MS || '8000', 10),
+    discoverDeadlineMs: parseInt(process.env.CRAWLER_DISCOVER_DEADLINE_MS || '30000', 10),
+    auxTimeoutMs: parseInt(process.env.CRAWLER_AUX_TIMEOUT_MS || '5000', 10),
+    maxRedirects: parseInt(process.env.CRAWLER_MAX_REDIRECTS || '5', 10),
+    maxHtmlBytes: parseInt(process.env.CRAWLER_MAX_HTML_BYTES || String(2.5 * 1024 * 1024), 10),
+    maxPageChars: parseInt(process.env.CRAWLER_MAX_PAGE_CHARS || '20000', 10),
+    maxTotalChars: parseInt(process.env.CRAWLER_MAX_TOTAL_CHARS || '500000', 10),
+    minPageChars: parseInt(process.env.CRAWLER_MIN_PAGE_CHARS || '60', 10),
+    maxRetries: parseInt(process.env.CRAWLER_MAX_RETRIES || '2', 10),
+    retryBaseDelayMs: parseInt(process.env.CRAWLER_RETRY_BASE_DELAY_MS || '500', 10),
+  },
 };
 
 module.exports = config;
