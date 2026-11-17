@@ -50,7 +50,7 @@ const config = {
   rag: {
     chunkSize: 400,   // tokens approx
     chunkOverlap: 50,
-    topK: 5,
+    topK: 10,         // increased from 5 for better recall, especially cross-lingual
   },
 
   // Website crawler settings — all overridable via environment variables.

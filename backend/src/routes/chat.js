@@ -124,7 +124,14 @@ router.post('/', async (req, res) => {
     /* ---- Answer cache: a hit skips usage count, retrieval AND the LLM ---- */
     const cacheKey = `${orgId}::v${orgVersion}::${normalizeQuestion(message)}`;
     const cached = answerCache.get(cacheKey);
-    if (cached && cached.expires > Date.now()) {
+
+    // Skip the cache when there's prior conversation context — contextual
+    // follow-up questions must go through the full LLM path so priorMessages
+    // are actually considered. Otherwise the same question would get the same
+    // cached answer regardless of what was already discussed.
+    const hasConversationContext = priorMessages.length > 0;
+
+    if (cached && cached.expires > Date.now() && !hasConversationContext) {
       /*
         Cache hit: quota was already counted when the answer was first
         generated. For streaming clients emit the whole reply as one delta

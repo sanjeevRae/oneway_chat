@@ -101,8 +101,8 @@ async function retrieveContext(organizationId, query, topK = config.rag.topK) {
     });
 
     if (!error && data && data.length > 0) {
-      // Filter by minimum similarity threshold (0.25 = reasonably relevant)
-      const relevant = data.filter((c) => (c.similarity || 0) >= 0.25);
+      // Lower threshold for cross-lingual retrieval (English query vs Portuguese content etc.)
+      const relevant = data.filter((c) => (c.similarity || 0) >= 0.12);
       if (relevant.length > 0) {
         console.log("[retrieveContext] Found " + relevant.length + " relevant chunks via vector search (filtered from " + data.length + ")");
         return relevant;
@@ -120,11 +120,12 @@ async function retrieveContext(organizationId, query, topK = config.rag.topK) {
   }
 
   try {
+    // Fetch all sections for the org (no arbitrary cap) so the keyword
+    // fallback can find cross-lingual matches even when vector search fails.
     const { data, error } = await supabaseAdmin
       .from("document_sections")
       .select("id, document_id, content")
-      .eq("organization_id", organizationId)
-      .limit(topK * 3);
+      .eq("organization_id", organizationId);
 
     if (error) {
       console.error("[retrieveContext] Text fallback query error:", error.message);
@@ -136,10 +137,27 @@ async function retrieveContext(organizationId, query, topK = config.rag.topK) {
       return [];
     }
 
-    const queryWords = query.toLowerCase().split(/\s+/).filter((w) => w.length > 2);
+    const queryLower = query.toLowerCase();
+    // Individual words (length > 2) plus the full query as a phrase
+    const queryWords = queryLower.split(/\s+/).filter((w) => w.length > 2);
+
     const scored = data.map((row) => {
       const contentLower = (row.content || "").toLowerCase();
-      const score = queryWords.reduce((s, w) => s + (contentLower.includes(w) ? 1 : 0), 0);
+      let score = 0;
+      // Full-phrase match scores highest
+      if (contentLower.includes(queryLower)) score += 10;
+      // Individual keyword matches: proper nouns (capitalized in original query)
+      // are unique identifiers — weight them heavily so rare names like
+      // "Organoeste" outrank common words like "information".
+      const originalWords = query.split(/\s+/).filter((w) => w.length > 2);
+      for (let i = 0; i < originalWords.length; i++) {
+        const w = queryWords[i];
+        const original = originalWords[i];
+        if (!contentLower.includes(w)) continue;
+        // Capitalized first letter = proper noun (person, company, brand)
+        if (/^[A-Z]/.test(original)) score += 10;
+        else score += 1;
+      }
       return { ...row, score };
     });
 
