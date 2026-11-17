@@ -4,6 +4,7 @@ const { requireAuth } = require('../middleware/auth');
 const { ingestDocument, deleteDocument, trackUsage, createPendingDocument, ingestIntoDocument, markDocumentFailed } = require('../services/rag');
 const { crawlSite } = require('../services/crawler');
 const { importGoogleDrive, importNotion } = require('../services/imports');
+const { extractFileText, extractTextInput } = require('../services/extract');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -138,7 +139,7 @@ router.post('/text', async (req, res) => {
   }
 });
 
-/** POST /api/knowledge/upload — file upload (txt/md/pdf/csv) */
+/** POST /api/knowledge/upload — file upload (pdf/docx/txt/md/csv/html) */
 router.post('/upload', async (req, res) => {
   try {
     if (!req.files || !req.files.file) {
@@ -150,57 +151,11 @@ router.post('/upload', async (req, res) => {
       return res.status(400).json({ error: 'File too large (max 5MB on free plan)' });
     }
 
-    const name = file.name.toLowerCase();
-    const mime = (file.mimetype || '').toLowerCase();
-
-    const isPdf =
-      name.endsWith('.pdf')
-      || mime === 'application/pdf'
-      || mime === 'application/x-pdf'
-      || mime === 'application/x-bzpdf'
-      || mime === 'application/x-gzpdf'
-      || mime === 'application/octet-stream' && name.endsWith('.pdf');
-
-    const isText =
-      name.endsWith('.txt')
-      || mime === 'text/plain'
-      || mime.startsWith('text/');
-
-    const isMarkdown =
-      name.endsWith('.md')
-      || mime === 'text/markdown'
-      || mime === 'text/x-markdown';
-
-    const isCsv =
-      name.endsWith('.csv')
-      || mime === 'text/csv'
-      || mime === 'application/csv';
-
-    let text = '';
-
-    if (isPdf) {
-      try {
-        const pdfParse = require('pdf-parse');
-        const pdf = await pdfParse(file.data);
-        text = pdf.text || '';
-      } catch (err) {
-        return res.status(400).json({
-          error: 'Could not read PDF. Make sure it is not password-protected or corrupted.',
-        });
-      }
-    } else if (isText || isMarkdown || isCsv) {
-      let raw = file.data;
-      // Strip UTF-8 BOM if present so it doesn't corrupt extracted text
-      if (raw[0] === 0xEF && raw[1] === 0xBB && raw[2] === 0xBF) {
-        raw = raw.slice(3);
-      }
-      text = raw.toString('utf8');
-    } else {
-      return res.status(400).json({ error: 'Unsupported file type. Use PDF, TXT, MD or CSV.' });
-    }
-
-    if (!text || text.trim().length < 20) {
-      return res.status(400).json({ error: 'Could not extract text from file' });
+    let text;
+    try {
+      text = await extractFileText(file.data, file.name, file.mimetype);
+    } catch (err) {
+      return res.status(err.status || 400).json({ error: err.message });
     }
 
     const result = await ingestDocument({
@@ -251,3 +206,5 @@ router.delete('/:id', async (req, res) => {
 });
 
 module.exports = router;
+
+
