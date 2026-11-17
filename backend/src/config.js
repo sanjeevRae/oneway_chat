@@ -28,10 +28,11 @@ const config = {
     // When empty, verification is skipped (dev mode / not yet configured)
   },
 
-  // Embeddings: local MiniLM via HuggingFace Inference API (free) or fallback hash
+  // Embeddings: multilingual MiniLM via HuggingFace Inference API (free) or fallback hash
+  // paraphrase-multilingual-MiniLM-L12-v2 supports 50+ languages (incl. Chinese) at 384 dims
   embeddings: {
     hfToken: process.env.HUGGINGFACE_API_KEY || '',
-    hfModel: process.env.HF_EMBEDDING_MODEL || 'sentence-transformers/all-MiniLM-L6-v2',
+    hfModel: process.env.HF_EMBEDDING_MODEL || 'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2',
     dimensions: 384,
   },
 

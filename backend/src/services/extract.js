@@ -16,7 +16,7 @@ const pdfParse = require('pdf-parse');
 const mammoth = require('mammoth');
 const { extractTextFromHtml } = require('./ingest');
 
-const MAX_EXTRACT_CHARS = 200000; // safety cap so huge docs don't OOM the embedder
+const MAX_EXTRACT_CHARS = 5_000_000; // ~5M chars safety cap; chunker + embedder handle the rest
 
 /* ------------------------------------------------------------------ */
 /* Helpers                                                            */

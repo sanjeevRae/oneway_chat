@@ -79,9 +79,25 @@ app.use(express.json({
 
 app.use(fileUpload({
   limits: {
-    fileSize: 6 * 1024 * 1024
-  }
+    fileSize: 20 * 1024 * 1024  // 20MB per file
+  },
+  abortOnLimit: true,
 }));
+
+/* --------------------------------------------------------------- */
+/* File-upload error handling                                      */
+/* --------------------------------------------------------------- */
+/* express-fileupload throws LIMIT_FILE_SIZE when a file exceeds
+   the limit. Catch it here so the client always gets JSON,
+   never an HTML error page from a proxy or middleware. */
+app.use((err, req, res, next) => {
+  if (err && err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(413).json({
+      error: `File too large. Maximum upload size is 20MB.`,
+    });
+  }
+  next(err);
+});
 
 /*
 |--------------------------------------------------------------------------

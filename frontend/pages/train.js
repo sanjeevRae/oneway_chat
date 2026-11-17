@@ -85,6 +85,14 @@ export default function Train() {
   async function upload() {
     const file = fileRef.current?.files?.[0];
     if (!file) return;
+
+    // Client-side size check (matches backend 20MB limit)
+    const MAX_SIZE = 20 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      setError(`File too large. Maximum upload size is 20MB.`);
+      return;
+    }
+
     setBusy('upload'); setError(''); setNotice('');
     try {
       const fd = new FormData();
@@ -162,7 +170,7 @@ export default function Train() {
         <div className="card flex flex-col p-5 transition-colors duration-150 hover:border-gray-300">
           <div className="mb-3.5 flex h-9 w-9 items-center justify-center rounded-lg border border-brand-100 bg-brand-50"><FileIcon /></div>
           <h3 className="mb-0.5 text-sm font-semibold text-ink-900">Upload file</h3>
-          <p className="mb-4 text-xs leading-relaxed text-ink-500">PDF, DOCX, TXT, MD or CSV (max 5MB).</p>
+          <p className="mb-4 text-xs leading-relaxed text-ink-500">PDF, DOCX, TXT, MD or CSV (max 20MB).</p>
           <div className="mt-auto space-y-2.5">
             <input ref={fileRef} type="file" accept=".pdf,.docx,.txt,.md,.csv" className="w-full text-xs text-ink-500 file:mr-3 file:cursor-pointer file:rounded-md file:border file:border-gray-300 file:bg-white file:px-2.5 file:py-1.5 file:text-xs file:font-medium file:text-ink-700 hover:file:bg-gray-50" />
             <button onClick={upload} disabled={busy} className="btn-primary w-full !py-2 text-xs">{busy === 'upload' ? 'Uploading…' : 'Upload & learn'}</button>

@@ -7,12 +7,13 @@ const config = require('../config');
 function chunkText(text, chunkSize = config.rag.chunkSize, overlap = config.rag.chunkOverlap) {
   if (!text || text.trim().length === 0) return [];
 
-  // Normalize whitespace
+  // Normalize whitespace (collapse runs, keep CJK characters intact)
   const normalized = text.replace(/\s+/g, ' ').trim();
 
-  // Split into sentences (handle common abbreviations and punctuation)
+  // Split into sentences.
+  // Supports English (.!?) and CJK (。？！) sentence boundaries.
   const sentences = normalized
-    .split(/(?<=[.!?])\s+/)
+    .split(/(?<=[.!?。？！])\s*/)
     .map((s) => s.trim())
     .filter((s) => s.length > 0);
 
@@ -22,8 +23,16 @@ function chunkText(text, chunkSize = config.rag.chunkSize, overlap = config.rag.
   let currentChunk = [];
   let currentWordCount = 0;
 
+  // Count "units" for chunk sizing: CJK languages have no spaces, so count
+  // characters; Latin-script languages count words.
+  function countUnits(s) {
+    return /[\u4e00-\u9fff\u3040-\u30ff\u3400-\u4dbf\uf900-\ufaff\uac00-\ud7af]/.test(s)
+      ? s.length
+      : s.split(/\s+/).length;
+  }
+
   for (const sentence of sentences) {
-    const sentenceWords = sentence.split(/\s+/).length;
+    const sentenceWords = countUnits(sentence);
 
     // If adding this sentence would exceed chunk size, finalize current chunk
     if (currentWordCount + sentenceWords > chunkSize && currentChunk.length > 0) {
@@ -35,7 +44,7 @@ function chunkText(text, chunkSize = config.rag.chunkSize, overlap = config.rag.
       let overlapCount = 0;
       const overlapSentences = [];
       for (let i = currentChunk.length - 1; i >= 0; i--) {
-        const w = currentChunk[i].split(/\s+/).length;
+        const w = countUnits(currentChunk[i]);
         if (overlapCount + w > overlapWords) break;
         overlapCount += w;
         overlapSentences.unshift(currentChunk[i]);
