@@ -346,6 +346,153 @@ router.get('/bot/:orgId', async (req, res) => {
       flex: none;
     }
 
+    /* ---------- Markdown rendering inside bot messages ---------- */
+
+    .message.bot strong,
+    .message.bot b {
+      font-weight: 700;
+    }
+
+    .message.bot em,
+    .message.bot i {
+      font-style: italic;
+    }
+
+    .message.bot code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.875em;
+      background: #f3f4f6;
+      padding: 1px 4px;
+      border-radius: 4px;
+      color: #111827;
+    }
+
+    .message.bot pre {
+      background: #f3f4f6;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      overflow-x: auto;
+      margin: 8px 0;
+    }
+
+    .message.bot pre code {
+      background: transparent;
+      padding: 0;
+      color: inherit;
+      font-size: inherit;
+    }
+
+    .message.bot ul,
+    .message.bot ol {
+      margin: 6px 0 6px 20px;
+      padding-left: 20px;
+    }
+
+    .message.bot ul {
+      list-style-type: disc;
+    }
+
+    .message.bot ol {
+      list-style-type: decimal;
+    }
+
+    .message.bot li {
+      margin: 3px 0;
+    }
+
+    .message.bot h1 {
+      font-size: 20px;
+      margin: 12px 0 6px;
+      font-weight: 700;
+    }
+
+    .message.bot h2 {
+      font-size: 18px;
+      margin: 10px 0 5px;
+      font-weight: 700;
+    }
+
+    .message.bot h3 {
+      font-size: 16px;
+      margin: 8px 0 4px;
+      font-weight: 700;
+    }
+
+    .message.bot p {
+      margin: 6px 0;
+    }
+
+    .message.bot blockquote {
+      margin: 8px 0;
+      padding: 8px 14px;
+      border-left: 4px solid var(--brand);
+      background: #f9fafb;
+      font-style: italic;
+      color: #4b5563;
+      border-radius: 0 6px 6px 0;
+    }
+
+    .message.bot hr {
+      border: 0;
+      border-top: 1px solid #e5e7eb;
+      margin: 12px 0;
+    }
+
+    .message.bot a {
+      color: var(--brand);
+      text-decoration: underline;
+      word-break: break-all;
+    }
+
+    .message.bot table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 8px 0;
+      font-size: 13px;
+    }
+
+    .message.bot .table-wrap {
+      overflow-x: auto;
+      margin: 8px 0;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+    }
+
+    .message.bot .table-wrap table {
+      margin: 0;
+      width: 100%;
+      min-width: 400px;
+    }
+
+    .message.bot table th,
+    .message.bot table td {
+      border: 1px solid #d1d5db;
+      padding: 6px 10px;
+      text-align: left;
+    }
+
+    .message.bot table th {
+      background: #f3f4f6;
+      font-weight: 700;
+    }
+
+    .message.bot table tr:nth-child(even) {
+      background: #f9fafb;
+    }
+
+    .message.bot p:last-child,
+    .message.bot ul:last-child,
+    .message.bot ol:last-child,
+    .message.bot blockquote:last-child,
+    .message.bot pre:last-child,
+    .message.bot table:last-child {
+      margin-bottom: 0;
+    }
+
     /* ---------- Mobile ---------- */
 
     @media (max-width: 480px) {
