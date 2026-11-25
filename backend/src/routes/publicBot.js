@@ -189,8 +189,8 @@ router.get('/bot/:orgId', async (req, res) => {
     }
 
     .header-title {
-      font-size: 15.5px;
-      font-weight: 600;
+      font-size: 17px;
+      font-weight: 700;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;

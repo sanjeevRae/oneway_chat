@@ -55,6 +55,24 @@
   const style = document.createElement('style');
 
   style.textContent = `
+    /* The widget lives inside arbitrary host pages: it must not
+       inherit their box model or form-element styling. Everything
+       below is scoped to the widget's own ids. */
+    #onewaybot-window,
+    #onewaybot-window *,
+    #onewaybot-window *::before,
+    #onewaybot-window *::after,
+    #onewaybot-button,
+    #onewaybot-button * {
+      box-sizing: border-box;
+    }
+
+    #onewaybot-window button,
+    #onewaybot-window input {
+      font-family: inherit;
+      margin: 0;
+    }
+
     #onewaybot-button {
       position: fixed;
       right: 20px;
@@ -101,11 +119,18 @@
       width: 360px;
       height: 520px;
 
+      /* Never wider or taller than the viewport it sits in. */
+      max-width: calc(100vw - 32px);
+      max-height: calc(100vh - 110px);
+
       background: #ffffff;
 
       border-radius: 16px;
 
       overflow: hidden;
+
+      /* Scrolling inside the widget must not chain to the host page. */
+      overscroll-behavior: contain;
 
       box-shadow: 0 10px 40px rgba(0, 0, 0, .25);
 
@@ -120,41 +145,99 @@
         sans-serif;
     }
 
+    @supports (height: 100dvh) {
+      #onewaybot-window {
+        max-height: calc(100dvh - 110px);
+      }
+    }
+
     /* =========================
        HEADER
     ========================= */
 
     #onewaybot-header {
-      padding: 15px 16px;
+      padding: 10px 8px 10px 18px;
 
       background: #6366f1;
 
       color: #ffffff;
 
-      font-weight: 600;
-
       display: flex;
 
       justify-content: space-between;
       align-items: center;
+
+      gap: 10px;
+
+      min-width: 0;
+
+      flex-shrink: 0;
+    }
+
+    /* The bot name carries its own size: inheriting the host page's
+       font-size made it render small on some sites. A long name
+       truncates instead of pushing the close button out. */
+    #onewaybot-title {
+      font-size: 17px;
+
+      font-weight: 700;
+
+      line-height: 1.2;
+
+      letter-spacing: .01em;
+
+      flex: 1;
+
+      min-width: 0;
+
+      white-space: nowrap;
+
+      overflow: hidden;
+
+      text-overflow: ellipsis;
     }
 
     #onewaybot-close {
+      width: 44px;
+      height: 44px;
+
+      min-width: 44px;
+
+      flex: 0 0 44px;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
       background: transparent;
 
       border: 0;
+      border-radius: 10px;
 
       color: #ffffff;
 
-      font-size: 18px;
-
-      font-weight: 600;
-
       cursor: pointer;
 
-      padding: 2px 6px;
+      padding: 0;
+    }
 
-      line-height: 1;
+    #onewaybot-close:hover,
+    #onewaybot-close:active {
+      background: rgba(255, 255, 255, .18);
+    }
+
+    #onewaybot-close:focus-visible {
+      outline: 2px solid rgba(255, 255, 255, .85);
+      outline-offset: 2px;
+    }
+
+    #onewaybot-close svg {
+      display: block;
+
+      width: 20px;
+      height: 20px;
+
+      flex-shrink: 0;
     }
 
     /* =========================
@@ -164,7 +247,13 @@
     #onewaybot-messages {
       flex: 1;
 
+      min-width: 0;
+      min-height: 0;
+
       overflow-y: auto;
+      overflow-x: hidden;
+
+      overscroll-behavior: contain;
 
       padding: 14px;
 
@@ -180,6 +269,8 @@
 
     .onewaybot-message {
       max-width: 82%;
+
+      min-width: 0;
 
       padding: 9px 11px;
 
@@ -358,6 +449,10 @@
     #onewaybot-input-area {
       display: flex;
 
+      min-width: 0;
+
+      flex-shrink: 0;
+
       padding: 9px;
 
       border-top: 1px solid #dddddd;
@@ -390,6 +485,10 @@
     #onewaybot-send {
       margin-left: 7px;
 
+      /* Explicit width: a host page's global button rule must not
+         stretch the send button. */
+      width: auto;
+
       border: 0;
 
       border-radius: 10px;
@@ -410,6 +509,8 @@
 
       flex-shrink: 0;
 
+      min-width: 0;
+
       max-width: 45%;
 
       overflow: hidden;
@@ -427,17 +528,44 @@
        MOBILE
     ========================= */
 
+    /* On phones the chat takes the full screen: no margins to
+       overflow past, the close button always visible at the top,
+       and the composer always reachable at the bottom. */
     @media (max-width: 480px) {
 
       #onewaybot-window {
-        right: 10px;
-        left: 10px;
+        top: 0;
+        right: 0;
+        bottom: auto;
+        left: 0;
 
-        bottom: 80px;
+        width: 100%;
 
-        width: auto;
+        max-width: 100%;
 
-        height: 70vh;
+        height: 100vh;
+        height: 100dvh;
+
+        max-height: none;
+
+        border-radius: 0;
+      }
+
+      #onewaybot-header {
+        padding-top: calc(10px + env(safe-area-inset-top, 0px));
+        padding-right: calc(8px + env(safe-area-inset-right, 0px));
+        padding-left: calc(18px + env(safe-area-inset-left, 0px));
+      }
+
+      #onewaybot-input-area {
+        padding-bottom: calc(9px + env(safe-area-inset-bottom, 0px));
+        padding-right: calc(9px + env(safe-area-inset-right, 0px));
+        padding-left: calc(9px + env(safe-area-inset-left, 0px));
+      }
+
+      /* 16px input text stops iOS Safari auto-zooming on focus. */
+      #onewaybot-input {
+        font-size: 16px;
       }
 
       #onewaybot-button {
@@ -456,6 +584,8 @@
   const button = document.createElement('button');
 
   button.id = 'onewaybot-button';
+
+  button.type = 'button';
 
   button.setAttribute(
     'aria-label',
@@ -482,12 +612,13 @@
   chat.innerHTML = `
     <div id="onewaybot-header">
 
-      <span>OneWay Bot</span>
+      <span id="onewaybot-title">OneWay Bot</span>
 
       <button
         id="onewaybot-close"
+        type="button"
         aria-label="Close chat"
-      >X</button>
+      ><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M5 5l14 14M19 5L5 19"/></svg></button>
 
     </div>
 
@@ -502,7 +633,7 @@
         autocomplete="off"
       />
 
-      <button id="onewaybot-send">
+      <button id="onewaybot-send" type="button">
         Send
       </button>
 
@@ -1003,12 +1134,71 @@
   }
 
   /* =========================
+     MOBILE KEYBOARD (visualViewport)
+
+     On phones, opening the keyboard shrinks the VISUAL viewport
+     without changing the layout viewport, so a 100dvh window can
+     lose its header or composer behind the keyboard (worst on iOS
+     Safari). While the chat is open on a small screen, sync the
+     window to the visual viewport; clear the inline styles again
+     on close so the stylesheet rules take back over.
+  ========================= */
+
+  const mobileQuery = window.matchMedia('(max-width: 480px)');
+
+  let vvListening = false;
+
+  function syncToVisualViewport() {
+
+    const vv = window.visualViewport;
+
+    if (!vv || !mobileQuery.matches) return;
+
+    chat.style.height = vv.height + 'px';
+
+    chat.style.top = vv.offsetTop + 'px';
+  }
+
+  function startViewportSync() {
+
+    if (!window.visualViewport || vvListening) return;
+
+    if (!mobileQuery.matches) return;
+
+    vvListening = true;
+
+    window.visualViewport.addEventListener('resize', syncToVisualViewport);
+
+    window.visualViewport.addEventListener('scroll', syncToVisualViewport);
+
+    syncToVisualViewport();
+  }
+
+  function stopViewportSync() {
+
+    if (window.visualViewport && vvListening) {
+
+      window.visualViewport.removeEventListener('resize', syncToVisualViewport);
+
+      window.visualViewport.removeEventListener('scroll', syncToVisualViewport);
+    }
+
+    vvListening = false;
+
+    chat.style.height = '';
+
+    chat.style.top = '';
+  }
+
+  /* =========================
      OPEN CHAT
   ========================= */
 
   function openChat() {
 
     chat.style.display = 'flex';
+
+    startViewportSync();
 
     if (
       !messages.dataset.welcome
@@ -1030,6 +1220,8 @@
   ========================= */
 
   function closeChat() {
+
+    stopViewportSync();
 
     chat.style.display = 'none';
   }
