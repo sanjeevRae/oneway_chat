@@ -12,6 +12,8 @@ import Link from 'next/link';
  *    recovery link:
  *      - a URL hash with type=recovery + access_token + refresh_token
  *        that setSession() accepts, or
+ *      - a ?token_hash= that verifyOtp() accepts (email templates
+ *        built on {{ .TokenHash }}), or
  *      - a ?code= that exchangeCodeForSession() accepts (this URL is
  *        only ever used as the recovery redirectTo, so a code landing
  *        here belongs to a recovery flow), or
@@ -46,6 +48,23 @@ import Link from 'next/link';
 const MARKER_KEY = 'onewaychat-recovery-verified';
 const MARKER_TTL_MS = 60 * 60 * 1000;
 const MIN_PASSWORD = 8;
+
+/*
+ * Every verification step is time-boxed. A Supabase auth call can stall
+ * (auth-lock contention with the _app session restore, a slow network),
+ * and "Verifying your reset link…" must never spin forever: any step
+ * that does not settle in time resolves as a failure and the visitor
+ * gets the invalid-link screen with a way to request a fresh link.
+ */
+const AUTH_CALL_TIMEOUT_MS = 8000;
+const VERIFY_WATCHDOG_MS = 12000;
+
+function withTimeout(promise) {
+  return Promise.race([
+    promise,
+    new Promise((resolve) => setTimeout(() => resolve(null), AUTH_CALL_TIMEOUT_MS)),
+  ]);
+}
 
 function readMarker() {
   try {
@@ -97,6 +116,7 @@ export default function ResetPassword() {
     const verify = (userId) => {
       if (cancelled || decided) return;
       decided = true;
+      clearTimeout(watchdog);
       if (userId) writeMarker(userId);
       setStatus('ready');
     };
@@ -104,8 +124,12 @@ export default function ResetPassword() {
     const invalidate = () => {
       if (cancelled || decided) return;
       decided = true;
+      clearTimeout(watchdog);
       setStatus('invalid');
     };
+
+    // Hard watchdog: whatever happens below, "Verifying" always ends.
+    const watchdog = setTimeout(invalidate, VERIFY_WATCHDOG_MS);
 
     // PASSWORD_RECOVERY is a supported proof path (it can fire when the
     // SDK processes a callback). The listener never makes Supabase calls.
@@ -132,6 +156,8 @@ export default function ResetPassword() {
       const accessToken = hashParams.get('access_token');
       const refreshToken = hashParams.get('refresh_token');
       const code = queryParams.get('code');
+      const tokenHash = queryParams.get('token_hash');
+      const queryType = queryParams.get('type');
 
       window.history.replaceState(null, '', window.location.pathname);
 
@@ -143,36 +169,55 @@ export default function ResetPassword() {
 
       // Step 3 — implicit (hash) recovery.
       if (type === 'recovery' && accessToken && refreshToken) {
-        const { data, error: err } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken,
-        });
-        if (!err && data?.session?.user?.id) {
-          verify(data.session.user.id);
+        const result = await withTimeout(
+          supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          })
+        );
+        if (result && !result.error && result.data?.session?.user?.id) {
+          verify(result.data.session.user.id);
           return;
         }
         invalidate();
         return;
       }
 
-      // Step 4 — PKCE code recovery.
+      // Step 4 — token_hash recovery (email templates built on
+      // {{ .TokenHash }} link straight here with ?token_hash=&type=).
+      if (tokenHash) {
+        const result = await withTimeout(
+          supabase.auth.verifyOtp({
+            token_hash: tokenHash,
+            type: queryType || 'recovery',
+          })
+        );
+        if (result && !result.error && result.data?.session?.user?.id) {
+          verify(result.data.session.user.id);
+          return;
+        }
+        invalidate();
+        return;
+      }
+
+      // Step 5 — PKCE code recovery.
       if (code) {
-        const { data, error: err } =
-          await supabase.auth.exchangeCodeForSession(code);
-        if (!err && data?.session?.user?.id) {
-          verify(data.session.user.id);
+        const result = await withTimeout(
+          supabase.auth.exchangeCodeForSession(code)
+        );
+        if (result && !result.error && result.data?.session?.user?.id) {
+          verify(result.data.session.user.id);
           return;
         }
         invalidate();
         return;
       }
 
-      // Step 5 — refresh survival: tab marker + matching live session.
+      // Step 6 — refresh survival: tab marker + matching live session.
       const marker = readMarker();
       if (marker) {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
+        const result = await withTimeout(supabase.auth.getSession());
+        const session = result?.data?.session;
         if (session?.user?.id === marker.userId) {
           verify(session.user.id);
           return;
@@ -181,7 +226,7 @@ export default function ResetPassword() {
       }
 
       /*
-       * Step 6 — give a PASSWORD_RECOVERY event a brief chance to
+       * Step 7 — give a PASSWORD_RECOVERY event a brief chance to
        * arrive; after that, no proof means no form. An ordinary session
        * restoring in _app.js does not change this outcome.
        */
@@ -190,6 +235,7 @@ export default function ResetPassword() {
 
     return () => {
       cancelled = true;
+      clearTimeout(watchdog);
       sub.subscription.unsubscribe();
     };
   }, []);
