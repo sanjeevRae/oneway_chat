@@ -38,6 +38,8 @@ create table if not exists public.settings (
   webhook_url text,
   bot_name text default 'OneWay',
   welcome_message text default 'Hi! How can I help you today?',
+  send_button_text text not null default 'Send',
+  input_placeholder text not null default 'Type a message...',
   brand_color text default '#6366f1',
   updated_at timestamptz default now()
 );

@@ -3,6 +3,7 @@ const supabaseAdmin = require('../lib/supabase');
 const { retrieveContext, trackUsage } = require('../services/rag');
 const { buildSystemPrompt, getToolSchemas, runChatTurn, runChatTurnStream } = require('../services/groq');
 const { createToolExecutor } = require('../services/tools');
+const { widgetTextOrDefault } = require('../services/widgetText');
 const config = require('../config');
 
 const router = express.Router();
@@ -376,17 +377,36 @@ router.get('/config/:orgId', async (req, res) => {
   try {
     const { orgId } = req.params;
 
-    const { data: settings, error } = await supabaseAdmin
+    // Mutable per-tenant config: never let a browser/CDN cache serve a
+    // stale copy after an admin edits the widget text.
+    res.setHeader('Cache-Control', 'no-store');
+
+    let { data: settings, error } = await supabaseAdmin
       .from('settings')
-      .select('bot_name, welcome_message')
+      .select('bot_name, welcome_message, send_button_text, input_placeholder')
       .eq('organization_id', orgId)
       .maybeSingle();
+
+    /*
+      Databases that have not run migration_v7 yet have no widget-text
+      columns. Fall back to the pre-v7 select so the widget keeps
+      working (with default composer text) until the migration runs.
+    */
+    if (error && /send_button_text|input_placeholder|column/i.test(error.message || '')) {
+      ({ data: settings, error } = await supabaseAdmin
+        .from('settings')
+        .select('bot_name, welcome_message')
+        .eq('organization_id', orgId)
+        .maybeSingle());
+    }
 
     if (error) throw error;
 
     res.json({
       botName: settings?.bot_name || null,
       welcomeMessage: settings?.welcome_message || null,
+      sendButtonText: widgetTextOrDefault('send_button_text', settings?.send_button_text),
+      inputPlaceholder: widgetTextOrDefault('input_placeholder', settings?.input_placeholder),
     });
   } catch (err) {
     res.status(500).json({ error: 'Failed to load bot config' });

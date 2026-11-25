@@ -1,5 +1,6 @@
 const express = require('express');
 const supabaseAdmin = require('../lib/supabase');
+const { widgetTextOrDefault } = require('../services/widgetText');
 
 const router = express.Router();
 
@@ -27,11 +28,21 @@ router.get('/bot/:orgId', async (req, res) => {
       return res.status(404).send('Business not found');
     }
 
-    const { data: settings } = await supabaseAdmin
+    let { data: settings } = await supabaseAdmin
       .from('settings')
-      .select('bot_name, welcome_message, brand_color')
+      .select('bot_name, welcome_message, brand_color, input_placeholder')
       .eq('organization_id', orgId)
       .maybeSingle();
+
+    // Pre-migration_v7 databases have no input_placeholder column yet;
+    // fall back so the page keeps working with the default placeholder.
+    if (!settings) {
+      ({ data: settings } = await supabaseAdmin
+        .from('settings')
+        .select('bot_name, welcome_message, brand_color')
+        .eq('organization_id', orgId)
+        .maybeSingle());
+    }
 
     const botName = settings?.bot_name || 'OneWay Bot';
 
@@ -55,6 +66,23 @@ router.get('/bot/:orgId', async (req, res) => {
     const safeWelcome = String(
       settings?.welcome_message ||
         'Hi! How can I help you today?'
+    )
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+
+    /*
+      Custom input placeholder (Settings -> Chat widget text), escaped
+      for an HTML attribute context: a stored quote or angle bracket
+      must render literally, never break out of the attribute.
+      The send control stays an icon here, so its accessible label is
+      unchanged — only the placeholder is customizable on this page.
+    */
+    const safePlaceholder = widgetTextOrDefault(
+      'input_placeholder',
+      settings?.input_placeholder
     )
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
@@ -547,7 +575,7 @@ router.get('/bot/:orgId', async (req, res) => {
       <input
         id="input"
         type="text"
-        placeholder="Type your message..."
+        placeholder="${safePlaceholder}"
         autocomplete="off"
         aria-label="Message"
       >

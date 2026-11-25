@@ -2,6 +2,7 @@ const express = require('express');
 const crypto = require('crypto');
 const supabaseAdmin = require('../lib/supabase');
 const { requireAuth } = require('../middleware/auth');
+const { WIDGET_TEXT_FIELDS, normalizeWidgetTextForSave } = require('../services/widgetText');
 
 const router = express.Router();
 
@@ -116,6 +117,17 @@ router.patch('/settings', requireAuth, async (req, res) => {
   const allowed = ['bot_name', 'welcome_message', 'brand_color', 'notify_email', 'whatsapp_number', 'webhook_url', 'timezone'];
   const updates = {};
   for (const k of allowed) if (k in req.body) updates[k] = req.body[k];
+
+  // Widget text fields get strict validation (see services/widgetText):
+  // strings only, single-line, length-capped; empty resets to default;
+  // an omitted field is left unchanged.
+  for (const k of Object.keys(WIDGET_TEXT_FIELDS)) {
+    if (k in req.body) {
+      const { value, error } = normalizeWidgetTextForSave(k, req.body[k]);
+      if (error) return res.status(400).json({ error });
+      updates[k] = value;
+    }
+  }
   updates.updated_at = new Date().toISOString();
 
   const { data, error } = await supabaseAdmin

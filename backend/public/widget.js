@@ -403,6 +403,18 @@
       cursor: pointer;
 
       font-size: 14px;
+
+      /* A custom label (e.g. a longer translation) must never push
+         the input off the composer bar. */
+      white-space: nowrap;
+
+      flex-shrink: 0;
+
+      max-width: 45%;
+
+      overflow: hidden;
+
+      text-overflow: ellipsis;
     }
 
     #onewaybot-send:disabled {
@@ -556,6 +568,22 @@
           header.textContent =
             data.botName;
         }
+      }
+
+      /*
+        Custom composer text (Settings -> Chat widget text).
+        Applied ONLY through DOM properties — never innerHTML —
+        so a stored value can never be parsed as markup.
+      */
+
+      if (data.sendButtonText) {
+        send.textContent =
+          data.sendButtonText;
+      }
+
+      if (data.inputPlaceholder) {
+        input.placeholder =
+          data.inputPlaceholder;
       }
 
     } catch {
