@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import Link from 'next/link';
 
@@ -59,6 +59,14 @@ const MIN_PASSWORD = 8;
 const AUTH_CALL_TIMEOUT_MS = 8000;
 const VERIFY_WATCHDOG_MS = 12000;
 
+/*
+ * Callback credentials extracted from the URL, kept in module scope.
+ * The URL is scrubbed on first read; if the effect remounts
+ * (StrictMode dev double-invoke) the second run finds a clean URL and
+ * reuses this stash instead of concluding the link carried nothing.
+ */
+let stashedCallback = null;
+
 function withTimeout(promise) {
   return Promise.race([
     promise,
@@ -104,12 +112,16 @@ export default function ResetPassword() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [revocationWarning, setRevocationWarning] = useState(false);
-  const startedRef = useRef(false);
 
+  /*
+   * No mount guard here on purpose: React 18 StrictMode (next dev)
+   * mounts, unmounts and remounts effects, and a startedRef guard
+   * leaves the live mount with verification cancelled and its watchdog
+   * cleared — "Verifying…" forever. Instead every effect run is
+   * self-contained and its cleanup cancels only its own run, so a
+   * remount simply runs verification again from the top.
+   */
   useEffect(() => {
-    if (startedRef.current) return;
-    startedRef.current = true;
-
     let cancelled = false;
     let decided = false;
 
@@ -151,13 +163,36 @@ export default function ResetPassword() {
       );
       const queryParams = new URLSearchParams(window.location.search);
 
-      const hashError = hashParams.get('error') || queryParams.get('error');
-      const type = hashParams.get('type');
-      const accessToken = hashParams.get('access_token');
-      const refreshToken = hashParams.get('refresh_token');
-      const code = queryParams.get('code');
-      const tokenHash = queryParams.get('token_hash');
-      const queryType = queryParams.get('type');
+      let extracted = {
+        hashError: hashParams.get('error') || queryParams.get('error'),
+        type: hashParams.get('type'),
+        accessToken: hashParams.get('access_token'),
+        refreshToken: hashParams.get('refresh_token'),
+        code: queryParams.get('code'),
+        tokenHash: queryParams.get('token_hash'),
+        queryType: queryParams.get('type'),
+      };
+
+      const urlHasCredentials = Boolean(
+        extracted.hashError ||
+          extracted.accessToken ||
+          extracted.code ||
+          extracted.tokenHash
+      );
+      if (urlHasCredentials) {
+        stashedCallback = extracted;
+      } else if (stashedCallback) {
+        extracted = stashedCallback;
+      }
+      const {
+        hashError,
+        type,
+        accessToken,
+        refreshToken,
+        code,
+        tokenHash,
+        queryType,
+      } = extracted;
 
       window.history.replaceState(null, '', window.location.pathname);
 
