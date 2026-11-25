@@ -115,6 +115,28 @@ export default function Login() {
                   Password
                 </label>
 
+                <Link
+                  href="/forgot-password"
+                  onClick={() => {
+                    /*
+                     * Prefill the reset form with the typed email via
+                     * sessionStorage — never as a ?email= URL parameter,
+                     * which would leak the address into browser history,
+                     * analytics and server logs.
+                     */
+                    try {
+                      if (email.trim()) {
+                        sessionStorage.setItem('onewaychat-reset-email', email.trim());
+                      }
+                    } catch {
+                      // Storage unavailable — the form just starts empty.
+                    }
+                  }}
+                  className="text-[13px] font-medium text-brand-600 transition-colors hover:text-brand-700"
+                >
+                  Forgot password?
+                </Link>
+
               </div>
 
               <input

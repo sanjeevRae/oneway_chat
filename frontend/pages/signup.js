@@ -239,9 +239,9 @@ export default function Signup() {
                 id="password"
                 required
                 type="password"
-                minLength={6}
+                minLength={8}
                 autoComplete="new-password"
-                placeholder="Minimum 6 characters"
+                placeholder="Minimum 8 characters"
                 value={form.password}
                 onChange={set('password')}
                 className="input-base"
