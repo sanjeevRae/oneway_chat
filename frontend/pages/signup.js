@@ -46,6 +46,7 @@ export default function Signup() {
 
     try {
       const {
+        data,
         error,
       } = await supabase.auth.signUp({
         email: form.email,
@@ -53,12 +54,13 @@ export default function Signup() {
 
         options: {
           /*
-           * After the user clicks the
-           * Supabase confirmation email,
-           * return them to the chatbot app.
+           * After the user clicks the Supabase confirmation email,
+           * return them to the dedicated confirmation page, which
+           * establishes the session and handles expired links.
+           * router.basePath keeps this correct under /chat.
            */
           emailRedirectTo:
-            `${window.location.origin}/chat`,
+            `${window.location.origin}${router.basePath}/auth/confirm`,
 
           data: {
             full_name:
@@ -75,6 +77,17 @@ export default function Signup() {
 
       if (error) {
         setError(error.message);
+        return;
+      }
+
+      /*
+       * If Supabase email confirmation is disabled, signUp returns a
+       * live session — the account is ready, so go straight to the
+       * dashboard instead of telling the user to check an email that
+       * will never come.
+       */
+      if (data?.session) {
+        router.replace('/dashboard');
         return;
       }
 
@@ -259,6 +272,18 @@ export default function Signup() {
               <div className="rounded-lg border border-green-100 bg-green-50 px-3.5 py-2.5 text-[13px] text-green-700">
                 {success}
               </div>
+            )}
+
+            {success && (
+              <p className="text-center text-[13px] text-ink-500">
+                Didn&apos;t get the email?{' '}
+                <Link
+                  href="/auth/confirm"
+                  className="font-medium text-brand-700 hover:underline"
+                >
+                  Resend the confirmation link
+                </Link>
+              </p>
             )}
 
             <button

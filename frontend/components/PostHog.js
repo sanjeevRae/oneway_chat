@@ -12,7 +12,11 @@ import { useEffect } from 'react';
  * its URL on mount, but PostHog must not even initialise there —
  * scrubbing alone would race the first pageview capture.
  */
-const ANALYTICS_EXCLUDED_PATHS = ['/forgot-password', '/reset-password'];
+const ANALYTICS_EXCLUDED_PATHS = [
+  '/forgot-password',
+  '/reset-password',
+  '/auth/confirm',
+];
 
 function isExcludedPath() {
   return ANALYTICS_EXCLUDED_PATHS.some((p) => window.location.pathname.endsWith(p));
@@ -27,7 +31,7 @@ function sanitizeUrl(raw) {
   try {
     const url = new URL(raw);
     url.hash = '';
-    for (const p of ['code', 'access_token', 'refresh_token', 'error', 'error_description', 'error_code']) {
+    for (const p of ['code', 'token_hash', 'access_token', 'refresh_token', 'error', 'error_description', 'error_code']) {
       url.searchParams.delete(p);
     }
     return url.toString();

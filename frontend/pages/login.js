@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
+import ResendConfirmation from '../components/ResendConfirmation';
 
 export default function Login() {
   const router = useRouter();
@@ -11,12 +12,14 @@ export default function Login() {
 
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [notConfirmed, setNotConfirmed] = useState(false);
 
   async function handleSubmit(event) {
     event.preventDefault();
 
     setBusy(true);
     setError('');
+    setNotConfirmed(false);
 
     try {
       const {
@@ -28,6 +31,17 @@ export default function Login() {
 
       if (error) {
         setError(error.message);
+        /*
+         * "Email not confirmed" is the one login failure with a
+         * self-serve fix: offer the resend form right here instead of
+         * leaving the user at a dead end.
+         */
+        if (
+          error.code === 'email_not_confirmed' ||
+          /email not confirmed/i.test(error.message || '')
+        ) {
+          setNotConfirmed(true);
+        }
         return;
       }
 
@@ -157,6 +171,15 @@ export default function Login() {
             {error && (
               <div className="rounded-lg border border-red-100 bg-red-50 px-3.5 py-2.5 text-[13px] text-red-600">
                 {error}
+              </div>
+            )}
+
+            {notConfirmed && (
+              <div className="space-y-3 rounded-lg border border-ink-100 bg-gray-50 px-3.5 py-3">
+                <p className="text-[13px] font-medium text-ink-700">
+                  Didn&apos;t receive your confirmation email?
+                </p>
+                <ResendConfirmation initialEmail={email} />
               </div>
             )}
 

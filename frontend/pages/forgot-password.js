@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import Head from 'next/head';
 import { supabase } from '../lib/supabaseClient';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
@@ -72,6 +73,10 @@ export default function ForgotPassword() {
 
   return (
     <main className="flex min-h-[calc(100vh-57px)] items-center justify-center bg-gray-50 px-5 py-16">
+      <Head>
+        <meta name="robots" content="noindex, nofollow, noarchive" />
+        <meta name="referrer" content="no-referrer" />
+      </Head>
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
           <div className="mx-auto mb-5 flex h-11 w-11 items-center justify-center rounded-xl bg-brand-600 text-base font-bold text-white">
